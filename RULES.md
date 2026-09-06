@@ -38,8 +38,7 @@ passed.
 - Bids run from 500 to 904 in steps of 10.
 - Each bid must beat the standing high bid by at least 10.
 - A pass is final.
-- If every seat passes, the last to act must claim 500. The Pass button is
-  disabled for them.
+- If every seat passes, the hand is reshuffled and bidding starts again.
 
 The highest bid at the end of the lap becomes the claim, and that player is the
 **claimer**.

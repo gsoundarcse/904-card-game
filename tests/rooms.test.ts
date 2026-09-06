@@ -293,20 +293,18 @@ describe('bidding', () => {
     assert.equal(t.room().round.highBid, 610)
   })
 
-  it('forces the last seat to claim when everyone has passed', () => {
+  it('reshuffles when everyone passes', () => {
     const t = dealtTable(4)
-    const dealer = t.room().round.dealer
     const first = t.room().round.current
-    for (let i = 0; i < 3; i++) t.act((first + i) % 4, { type: 'pass' })
+    const before = t.room().round.hands.map((hand) => hand.map((card) => card.id).join(','))
+    for (let i = 0; i < 4; i++) t.act((first + i) % 4, { type: 'pass' })
 
-    const last = (first + 3) % 4
-    assert.equal(last, dealer, 'the dealer acts last')
-    assert.equal(t.view(last).mustClaim, true, 'the view says so too')
-    rejects(() => t.act(last, { type: 'pass' }), /must claim/)
-
-    t.act(last, { type: 'bid', amount: MIN_CLAIM })
-    assert.equal(t.room().round.claimer, dealer)
-    assert.equal(t.room().round.claim, MIN_CLAIM)
+    const after = t.room()
+    assert.equal(after.status, 'bidding')
+    assert.equal(after.round.bidTurn, 0)
+    assert.equal(after.round.highBid, 0)
+    assert.deepEqual(after.round.passed, [false, false, false, false])
+    assert.notDeepEqual(after.round.hands.map((hand) => hand.map((card) => card.id).join(',')), before)
   })
 
   it('never forces a claim while a bid stands', () => {
@@ -327,6 +325,21 @@ describe('bidding', () => {
     assert.equal(t.room().status, 'trump')
     assert.equal(t.room().round.claim, 700)
     assert.equal(t.room().match.cardLimit, 7)
+  })
+
+  it('reshuffles after all six players pass', () => {
+    const t = dealtTable(6)
+    const first = t.room().round.current
+    const before = t.room().round.hands.map((hand) => hand.map((card) => card.id).join(','))
+
+    for (let i = 0; i < 6; i++) t.act((first + i) % 6, { type: 'pass' })
+
+    const after = t.room()
+    assert.equal(after.status, 'bidding')
+    assert.equal(after.round.bidTurn, 0)
+    assert.equal(after.round.highBid, 0)
+    assert.deepEqual(after.round.passed, [false, false, false, false, false, false])
+    assert.notDeepEqual(after.round.hands.map((hand) => hand.map((card) => card.id).join(',')), before)
   })
 })
 
@@ -359,6 +372,21 @@ describe('choosing trump', () => {
     const t = toPlayingPhase(dealtTable(4))
     const claimer = t.room().round.claimer!
     assert.equal(t.room().round.current, (claimer - 1 + 4) % 4)
+  })
+
+  it('gives Player 2 the opening lead when Player 3 is the claimer', () => {
+    const t = dealtTable(4)
+    const first = t.room().round.current
+    for (let i = 0; i < 4; i++) {
+      const seat = (first + i) % 4
+      t.act(seat, seat === 2 ? { type: 'bid', amount: 520 } : { type: 'pass' })
+    }
+
+    assert.equal(t.room().round.claimer, 2)
+    const claimer = 2
+    const card = t.room().round.hands[claimer][0]
+    t.act(claimer, { type: 'selectTrump', cardId: card.id })
+    assert.equal(t.room().round.current, 1)
   })
 })
 
@@ -403,9 +431,13 @@ describe('what each player is allowed to see', () => {
 
   it('reveals the trump to everyone once asked for', () => {
     const t = toPlayingPhase(dealtTable(4))
+    const r = t.room()
     const claimer = t.room().round.claimer!
+    const selectedTrumpId = t.room().round.trumpCard!.id
     const next = (claimer + 1) % 4
     rig(t, { [claimer]: ['Spades-2'], [next]: ['Hearts-3', 'Clubs-9'] }, claimer)
+    r.round.trumpCard = buildDeck(4).find((card) => card.id === selectedTrumpId)!
+    r.round.trumpSuit = 'Hearts'
 
     t.act(claimer, { type: 'playCard', cardId: 'Spades-2' })
     assert.equal(t.view(next).canAskTrump, true, 'void in spades, so may ask')
@@ -414,6 +446,7 @@ describe('what each player is allowed to see', () => {
     for (let seat = 0; seat < 4; seat++) {
       assert.equal(t.view(seat).round.trumpSuit, 'Hearts', `seat ${seat} now sees trump`)
       assert.equal(t.view(seat).round.trumpRevealed, true)
+      assert.equal(t.view(seat).round.trumpCard?.id, selectedTrumpId, 'everyone sees the actual selected card')
     }
   })
 
@@ -564,11 +597,26 @@ describe('double', () => {
     )
   })
 
+  it('does not offer double before the first five tricks are swept', () => {
+    const t = toPlayingPhase(dealtTable(4))
+    const r = t.room()
+    const claimer = r.round.claimer!
+    r.round.current = claimer
+    r.round.trickNumber = 4
+    r.round.teamTricks = teamOf(claimer) === 0 ? [4, 0] : [0, 4]
+    r.round.trumpCard = null
+    r.round.hands[claimer] = r.round.hands[claimer].slice(0, 1)
+
+    assert.equal(t.view(claimer).canCallDouble, false)
+  })
+
   it('is recorded when called on the last card', () => {
     const t = toPlayingPhase(dealtTable(4))
     const r = t.room()
     const claimer = r.round.claimer!
     r.round.current = claimer
+    r.round.trickNumber = 5
+    r.round.teamTricks = teamOf(claimer) === 0 ? [5, 0] : [0, 5]
     r.round.trumpCard = null
     r.round.hands[claimer] = r.round.hands[claimer].slice(0, 1)
     const v = t.view(claimer)

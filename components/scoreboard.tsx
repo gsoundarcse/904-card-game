@@ -29,7 +29,7 @@ export function Scoreboard({
           <div
             key={t}
             className={cn(
-              'flex min-w-24 flex-col rounded-xl border px-4 py-2',
+              'flex min-w-24 flex-col rounded-xl border px-4 py-2 shadow-lg',
               t === 0 ? 'border-team-a/50 bg-team-a/10' : 'border-team-b/50 bg-team-b/10',
               claimerTeam === t && 'ring-2 ring-gold',
             )}

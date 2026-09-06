@@ -90,12 +90,50 @@ describe('rank strength', () => {
 
 describe('sortHand', () => {
   it('groups by suit and orders by strength without mutating', () => {
-    const original = hand('Diamonds-10', 'Clubs-9', 'Hearts-2', 'Spades-3')
+    const original = hand('Diamonds-10', 'Hearts-2', 'Clubs-9', 'Spades-3')
     const snapshot = original.map((c) => c.id)
     const sorted = sortHand(original)
 
     assert.deepEqual(original.map((c) => c.id), snapshot, 'input untouched')
     assert.deepEqual(sorted.map((c) => c.id), ['Spades-3', 'Hearts-2', 'Clubs-9', 'Diamonds-10'])
+  })
+
+  it('keeps each suit together in the configured suit order', () => {
+    const sorted = sortHand(hand('Diamonds-2', 'Clubs-3', 'Clubs-J', 'Spades-9', 'Clubs-A'))
+    assert.deepEqual(sorted.map((c) => c.id), ['Spades-9', 'Diamonds-2', 'Clubs-3', 'Clubs-J', 'Clubs-A'])
+  })
+
+  it('puts the black suit between two red suits when Clubs are absent', () => {
+    const sorted = sortHand(hand('Diamonds-2', 'Hearts-A', 'Spades-9'))
+    assert.deepEqual(sorted.map((c) => c.id), ['Hearts-A', 'Spades-9', 'Diamonds-2'])
+  })
+
+  it('covers every non-empty suit combination', () => {
+    const cases: [string, Suit[]][] = [
+      ['Spades', ['Spades']],
+      ['Clubs', ['Clubs']],
+      ['Hearts', ['Hearts']],
+      ['Diamonds', ['Diamonds']],
+      ['Spades + Clubs', ['Spades', 'Clubs']],
+      ['Spades + Hearts', ['Spades', 'Hearts']],
+      ['Spades + Diamonds', ['Spades', 'Diamonds']],
+      ['Clubs + Hearts', ['Clubs', 'Hearts']],
+      ['Clubs + Diamonds', ['Clubs', 'Diamonds']],
+      ['Hearts + Diamonds', ['Hearts', 'Diamonds']],
+      ['Spades + Clubs + Hearts', ['Spades', 'Hearts', 'Clubs']],
+      ['Spades + Clubs + Diamonds', ['Spades', 'Diamonds', 'Clubs']],
+      ['Spades + Hearts + Diamonds', ['Hearts', 'Spades', 'Diamonds']],
+      ['Clubs + Hearts + Diamonds', ['Hearts', 'Clubs', 'Diamonds']],
+      ['all suits', ['Spades', 'Hearts', 'Clubs', 'Diamonds']],
+    ]
+
+    for (const [label, expected] of cases) {
+      const cards = expected.flatMap((suit, index) => [`${suit}-A`, `${suit}-${index === 0 ? '2' : '3'}`])
+      const actual = sortHand(hand(...cards)).map((card) => card.suit)
+      const grouped = [...new Set(actual)]
+      assert.deepEqual(grouped, expected, label)
+      assert.equal(actual.length, cards.length, `${label}: no cards lost`)
+    }
   })
 })
 

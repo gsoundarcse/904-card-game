@@ -80,6 +80,8 @@
   --suit-red: oklch(0.55 0.2 25);
   --team-a: oklch(0.78 0.13 85);
   --team-b: oklch(0.7 0.11 235);
+  --team-a-glow: oklch(0.78 0.13 85 / 0.16);
+  --team-b-glow: oklch(0.7 0.11 235 / 0.16);
 }
 
 @layer base {
@@ -87,7 +89,12 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background:
+      radial-gradient(circle at 12% 8%, var(--team-b-glow), transparent 28rem),
+      radial-gradient(circle at 88% 92%, var(--team-a-glow), transparent 30rem),
+      repeating-linear-gradient(135deg, oklch(1 0 0 / 0.018) 0 1px, transparent 1px 12px),
+      var(--background);
   }
 }
 

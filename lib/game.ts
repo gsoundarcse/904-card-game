@@ -86,10 +86,32 @@ export function teamOf(seat: number): 0 | 1 {
 export const TEAM_NAME = ['Team A', 'Team B'] as const
 
 export function sortHand(hand: Card[]): Card[] {
-  return [...hand].sort((a, b) => {
+  const ordered = [...hand].sort((a, b) => {
     if (a.suit !== b.suit) return HAND_SUIT_ORDER.indexOf(a.suit) - HAND_SUIT_ORDER.indexOf(b.suit)
     return rankStrength(a.rank) - rankStrength(b.rank)
   })
+  const groups = new Map<Suit, Card[]>()
+  for (const card of ordered) groups.set(card.suit, [...(groups.get(card.suit) ?? []), card])
+
+  const black: Suit[] = [...groups.keys()].filter((suit) => !RED_SUITS.includes(suit))
+  const red: Suit[] = [...groups.keys()].filter((suit) => RED_SUITS.includes(suit))
+  const sorted: Card[] = []
+  let lastColor: 'black' | 'red' | null = null
+
+  while (black.length > 0 || red.length > 0) {
+    const chooseRed: boolean =
+      black.length === 0 ||
+      (red.length > black.length && lastColor !== 'red') ||
+      (lastColor === 'black' && red.length > 0 && black.length <= red.length)
+    const primary: Suit[] = chooseRed ? red : black
+    const fallback: Suit[] = chooseRed ? black : red
+    let suit: Suit | undefined = primary.shift()
+    if (!suit) suit = fallback.shift()
+    if (!suit) break
+    sorted.push(...groups.get(suit)!)
+    lastColor = RED_SUITS.includes(suit) ? 'red' : 'black'
+  }
+  return sorted
 }
 
 export interface PlayableResult {

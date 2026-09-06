@@ -103,12 +103,14 @@ export function MysteryCard({
 export function ClickableCard({
   card,
   size = 'lg',
+  fan = true,
   disabled,
   selected,
   onClick,
 }: {
   card: Card
   size?: Size
+  fan?: boolean
   disabled?: boolean
   selected?: boolean
   onClick?: () => void
@@ -120,7 +122,8 @@ export function ClickableCard({
       disabled={disabled}
       aria-label={`${card.rank} of ${card.suit}, ${card.points} points`}
       className={cn(
-        'group relative -ml-3 shrink-0 rounded-xl transition-all first:ml-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
+        'group relative shrink-0 rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
+        fan && '-ml-3 first:ml-0',
         disabled
           ? 'cursor-not-allowed opacity-40 saturate-0'
           : 'cursor-pointer hover:-translate-y-4 hover:z-10',

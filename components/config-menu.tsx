@@ -1,6 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { useState } from 'react'
 import { MAX_CLAIM } from '@/lib/game'
 
 const OPTIONS = [
@@ -18,7 +19,10 @@ const OPTIONS = [
   },
 ] as const
 
-export function ConfigMenu({ onStart }: { onStart: (count: number) => void }) {
+export function ConfigMenu({ onStart }: { onStart: (count: number, names: string[]) => void }) {
+  const [count, setCount] = useState(4)
+  const [names, setNames] = useState(['Player 1', 'Player 2', 'Player 3', 'Player 4', 'Player 5', 'Player 6'])
+
   return (
     <div className="mx-auto flex min-h-svh w-full max-w-4xl flex-col items-center justify-center gap-10 px-4 py-12">
       <header className="text-center">
@@ -37,9 +41,10 @@ export function ConfigMenu({ onStart }: { onStart: (count: number) => void }) {
           <button
             key={opt.count}
             type="button"
-            onClick={() => onStart(opt.count)}
+            onClick={() => setCount(opt.count)}
             className={cn(
               'group flex flex-col items-start gap-3 rounded-2xl border border-border bg-secondary/60 p-6 text-left',
+              count === opt.count && 'border-gold bg-secondary',
               'transition-all hover:-translate-y-1 hover:border-gold hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
             )}
           >
@@ -58,6 +63,31 @@ export function ConfigMenu({ onStart }: { onStart: (count: number) => void }) {
           </button>
         ))}
       </div>
+
+      <section className="w-full rounded-2xl border border-border bg-secondary/40 p-5">
+        <h2 className="font-serif text-xl font-bold text-gold-soft">Player names</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {names.slice(0, count).map((name, index) => (
+            <label key={index} className="flex items-center gap-3">
+              <span className="w-16 font-mono text-xs uppercase tracking-widest text-muted-foreground">P{index + 1}</span>
+              <input
+                value={name}
+                maxLength={20}
+                onChange={(event) => setNames((current) => current.map((item, i) => (i === index ? event.target.value : item)))}
+                className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
+                placeholder={`Player ${index + 1}`}
+              />
+            </label>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => onStart(count, names.slice(0, count).map((name, index) => name.trim() || `Player ${index + 1}`))}
+          className="mt-5 w-full rounded-xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5"
+        >
+          Deal the cards
+        </button>
+      </section>
 
       <a
         href="/thinnai"

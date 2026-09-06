@@ -80,6 +80,10 @@ export interface Room {
      * left — in which case it is played without trump ever going live.
      */
     trumpCard: Card | null
+    /** The selected card remains private until trump is revealed. */
+    selectedTrumpCard: Card | null
+    /** The real selected card, available to everyone once trump is revealed. */
+    revealedTrumpCard: Card | null
     trumpRevealed: boolean
     doubleCalled: boolean
     trick: TrickPlay[]
@@ -132,6 +136,8 @@ function emptyRound(seatCount: number): Room['round'] {
     claim: 0,
     trumpSuit: null,
     trumpCard: null,
+    selectedTrumpCard: null,
+    revealedTrumpCard: null,
     trumpRevealed: false,
     doubleCalled: false,
     trick: [],
@@ -289,11 +295,6 @@ function minAllowed(room: Room): number {
   return Math.min(MAX_CLAIM, highBid > 0 ? highBid + CLAIM_STEP : MIN_CLAIM)
 }
 
-/** Last seat to act with no bid on the table must claim. */
-function mustClaim(room: Room): boolean {
-  return room.round.bidTurn === room.seatCount - 1 && room.round.highBidder === null
-}
-
 /** One lap only: when every seat has acted, the high bid takes the claim. */
 function advanceBidding(room: Room) {
   const r = room.round
@@ -304,13 +305,12 @@ function advanceBidding(room: Room) {
     return
   }
   if (r.highBidder === null) {
-    // Unreachable: the last seat cannot pass without a bid. Guarded anyway.
-    r.claimer = r.current
-    r.claim = MIN_CLAIM
-  } else {
-    r.claimer = r.highBidder
-    r.claim = r.highBid
+    // No claim: deal fresh hands and start bidding again with the same dealer.
+    dealRound(room, r.dealer)
+    return
   }
+  r.claimer = r.highBidder
+  r.claim = r.highBid
   r.current = r.claimer
   room.status = 'trump'
 }
@@ -333,7 +333,6 @@ function doBid(room: Room, player: RoomPlayer, amount: number) {
 function doPass(room: Room, player: RoomPlayer) {
   if (room.status !== 'bidding') throw new ActionError('Not bidding')
   requireTurn(room, player)
-  if (mustClaim(room)) throw new ActionError('You are last to act with no bid on the table — you must claim')
   room.round.passed[player.seat] = true
   advanceBidding(room)
 }
@@ -355,6 +354,8 @@ function doSelectTrump(room: Room, player: RoomPlayer, cardId: string) {
   // claimer count as void in its suit.
   r.hands[player.seat] = hand.filter((c) => c.id !== cardId)
   r.trumpCard = card
+  r.selectedTrumpCard = card
+  r.revealedTrumpCard = null
   r.trumpSuit = card.suit
   r.trumpRevealed = false
   // The player to the claimer's right leads the first trick.
@@ -378,6 +379,7 @@ function doAskTrump(room: Room, player: RoomPlayer) {
   const playable = getPlayable(r.hands[player.seat], r.trick, r.trumpRevealed)
   if (!playable.canAskTrump) throw new ActionError('You can only ask when void in the led suit')
 
+  r.revealedTrumpCard = r.selectedTrumpCard
   r.trumpRevealed = true
   // Revealing hands the card back to the claimer, who may now play it.
   returnTrumpCard(room)
@@ -495,6 +497,7 @@ export interface PlayerView {
     claimer: number | null
     claim: number
     trumpSuit: Suit | null
+    trumpCard: Card | null
     trumpRevealed: boolean
     doubleCalled: boolean
     trick: TrickPlay[]
@@ -560,6 +563,7 @@ export function viewFor(room: Room, playerId: string): PlayerView {
       claimer: r.claimer,
       claim: r.claim,
       trumpSuit: trumpVisible ? r.trumpSuit : null,
+      trumpCard: trumpVisible ? (r.trumpRevealed ? r.revealedTrumpCard : r.trumpCard) : null,
       trumpRevealed: r.trumpRevealed,
       doubleCalled: r.doubleCalled,
       trick: r.trick,
@@ -576,9 +580,15 @@ export function viewFor(room: Room, playerId: string): PlayerView {
     playableIds: playable ? Array.from(playable.playableIds) : [],
     canAskTrump: playable?.canAskTrump === true,
     canCallDouble:
-      inPlay && r.claimer === me.seat && myHand.length === 1 && !r.trumpCard && !r.doubleCalled,
+      inPlay &&
+      r.claimer === me.seat &&
+      myHand.length === 1 &&
+      !r.trumpCard &&
+      !r.doubleCalled &&
+      r.trickNumber === CARDS_PER_PLAYER - 1 &&
+      r.teamTricks[teamOf(me.seat)] === CARDS_PER_PLAYER - 1,
     minBid: minAllowed(room),
-    mustClaim: room.status === 'bidding' && r.current === me.seat && mustClaim(room),
+    mustClaim: false,
   }
 }
 

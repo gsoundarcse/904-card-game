@@ -27,8 +27,12 @@ function Seat({ seat }: { seat: SeatView }) {
   return (
     <div
       className={cn(
-        'flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5 rounded-xl border bg-felt-dark/70 px-2 py-2 text-center backdrop-blur-sm transition-all',
-        seat.isCurrent ? 'border-gold shadow-[0_0_0_2px_var(--gold)]' : 'border-border/60',
+        'flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5 rounded-xl border bg-felt-dark/80 px-2 py-2 text-center backdrop-blur-sm transition-all',
+        seat.isCurrent
+          ? 'border-gold bg-gold/10 shadow-[0_0_0_2px_var(--gold),0_8px_30px_var(--team-a-glow)]'
+          : seat.team === 0
+            ? 'border-team-a/40'
+            : 'border-team-b/50',
       )}
     >
       <div className="flex items-center gap-1.5">
@@ -38,12 +42,11 @@ function Seat({ seat }: { seat: SeatView }) {
 
       <div className="flex h-8 items-center justify-center">
         {seat.handCount > 0 ? (
-          <div className="flex">
-            {Array.from({ length: seat.handCount }).map((_, i) => (
-              <div key={i} className={cn(i > 0 && '-ml-4')}>
-                <CardBack size="sm" className="h-8 w-6" />
-              </div>
-            ))}
+          <div className="flex items-center gap-2">
+            <CardBack size="sm" className="h-8 w-6" />
+            <span className="font-mono text-[10px] font-semibold text-muted-foreground">
+              {seat.handCount} {seat.handCount === 1 ? 'card' : 'cards'}
+            </span>
           </div>
         ) : (
           <span className="font-mono text-[10px] text-muted-foreground">empty</span>
@@ -114,8 +117,9 @@ export function GameTable({
   return (
     <div className="relative mx-auto h-[440px] w-full max-w-3xl sm:h-[560px]">
       {/* felt surface */}
-      <div className="absolute inset-6 rounded-[45%] border-4 border-gold/30 bg-felt shadow-[inset_0_0_80px_rgba(0,0,0,0.5)]">
-        <div className="absolute inset-4 rounded-[45%] border border-felt-line/60" />
+      <div className="absolute inset-6 rounded-[45%] border-4 border-gold/40 bg-[radial-gradient(ellipse_at_center,var(--felt)_0%,var(--felt-dark)_100%)] shadow-[inset_0_0_80px_rgba(0,0,0,0.5),0_12px_50px_rgba(0,0,0,0.25)]">
+        <div className="absolute inset-4 rounded-[45%] border border-team-b/30" />
+        <div className="absolute inset-8 rounded-[45%] border border-team-a/20" />
       </div>
 
       {/* trump indicator */}
@@ -143,7 +147,7 @@ export function GameTable({
       )}
 
       {/* central pile */}
-      <div className="absolute left-1/2 top-1/2 flex max-w-[60%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-2">
+      <div className="absolute left-1/2 top-1/2 flex max-w-[65%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/10 px-4 py-3 shadow-inner">
         {trick.length === 0 ? (
           <span className="font-serif text-sm italic text-foreground/50">
             {banner ? '' : 'The pile is empty'}

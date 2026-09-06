@@ -244,6 +244,7 @@ function Table({
         seats={seats}
         trick={trickToShow}
         trumpSuit={r.trumpSuit}
+        trumpCard={r.trumpCard}
         trumpRevealed={r.trumpRevealed}
         trumpPlaced={view.trumpFaceDown || r.trumpRevealed}
         banner={banner}
@@ -266,6 +267,7 @@ function Table({
                 <ClickableCard
                   key={card.id}
                   card={card}
+                  fan={false}
                   disabled={pending || !yourTurn || !playable.has(card.id)}
                   onClick={() => send({ type: 'playCard', cardId: card.id })}
                 />
@@ -348,7 +350,14 @@ function BidControls({
   const [amount, setAmount] = useState(view.minBid)
   useEffect(() => setAmount(view.minBid), [view.minBid])
 
-  const canBid = view.minBid <= MAX_CLAIM
+  const canBid = view.minBid <= MAX_CLAIM && Number.isInteger(amount) && amount % CLAIM_STEP === 0 && amount >= view.minBid
+  const bidError = canBid
+    ? null
+    : amount > MAX_CLAIM
+      ? `Maximum claim is ${MAX_CLAIM}.`
+      : amount < view.minBid
+        ? `Claim must be at least ${view.minBid}.`
+        : `Claim must be a whole number in steps of ${CLAIM_STEP}.`
 
   return (
     <div className="mt-3 flex flex-wrap items-center justify-center gap-3 border-t border-border pt-3">
@@ -362,7 +371,23 @@ function BidControls({
         >
           &minus;
         </button>
-        <span className="w-16 text-center font-serif text-2xl font-bold text-gold-soft">{amount}</span>
+        <input
+          type="number"
+          min={view.minBid}
+          max={MAX_CLAIM}
+          step={CLAIM_STEP}
+          value={amount}
+          onChange={(event) => {
+            const digits = event.target.value.replace(/\D/g, '').slice(0, 3)
+            setAmount(digits ? Number(digits) : view.minBid)
+          }}
+          className={cn(
+            'w-20 bg-transparent text-center font-serif text-2xl font-bold outline-none',
+            canBid ? 'text-gold-soft' : 'text-destructive',
+          )}
+          aria-invalid={!canBid}
+          aria-label="Claim amount"
+        />
         <button
           type="button"
           onClick={() => setAmount((v) => Math.min(MAX_CLAIM, v + CLAIM_STEP))}
@@ -394,6 +419,7 @@ function BidControls({
           ? 'Last to act and no bid on the table — you must claim.'
           : `One round of bidding. Minimum ${view.minBid}, maximum ${MAX_CLAIM}.`}
       </p>
+      {!canBid && <p className="w-full text-center font-mono text-[11px] text-destructive">{bidError}</p>}
     </div>
   )
 }
@@ -446,7 +472,7 @@ function PlayControls({
             {armed ? `Confirm — play ${lastCard.rank}${SUIT_SYMBOL[lastCard.suit]} as double` : 'Call double'}
           </button>
           <span className="font-mono text-[10px] text-muted-foreground">
-            {armed ? 'Tap again to commit' : 'Only if you take every trick'}
+            {armed ? 'Tap again to commit' : 'Only after your team takes the first five tricks'}
           </span>
         </div>
       )}
@@ -466,9 +492,6 @@ function PlayControls({
 
 function TrumpPicker({ view, send }: { view: PlayerView; send: (a: Action) => void }) {
   const [open, setOpen] = useState(false)
-  const [picked, setPicked] = useState<string | null>(null)
-
-  const chosen = view.yourHand.find((c) => c.id === picked) ?? null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
@@ -494,50 +517,18 @@ function TrumpPicker({ view, send }: { view: PlayerView; send: (a: Action) => vo
               <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Tap a card to lay it face down
               </p>
-              <div className="flex items-end justify-center overflow-x-auto pb-1 pl-3">
+              <div className="grid grid-cols-2 justify-items-center gap-3 pb-1 sm:grid-cols-3">
                 {view.yourHand.map((card) => (
                   <ClickableCard
                     key={card.id}
                     card={card}
-                    selected={picked === card.id}
-                    onClick={() => setPicked(card.id)}
+                    size="md"
+                    fan={false}
+                    onClick={() => send({ type: 'selectTrump', cardId: card.id })}
                   />
                 ))}
               </div>
             </div>
-
-            <div className="mt-4 grid grid-cols-4 gap-2">
-              {SUITS.map((suit) => {
-                const held = view.yourHand.filter((c) => c.suit === suit)
-                const points = held.reduce((sum, c) => sum + c.points, 0)
-                const red = suit === 'Hearts' || suit === 'Diamonds'
-                return (
-                  <div
-                    key={suit}
-                    className={cn(
-                      'rounded-lg border border-border bg-card/60 py-2',
-                      chosen?.suit === suit && 'border-gold ring-1 ring-gold',
-                    )}
-                  >
-                    <div className={cn('text-lg', red && 'text-suit-red')}>{SUIT_SYMBOL[suit as Suit]}</div>
-                    <div className="font-mono text-[10px] text-muted-foreground">
-                      {held.length} · {points}p
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => chosen && send({ type: 'selectTrump', cardId: chosen.id })}
-              disabled={!chosen}
-              className="mt-5 w-full rounded-xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40"
-            >
-              {chosen
-                ? `Lay ${chosen.rank}${SUIT_SYMBOL[chosen.suit]} face down — ${chosen.suit} is trump`
-                : 'Pick a card first'}
-            </button>
           </>
         )}
       </div>
