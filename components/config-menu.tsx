@@ -2,20 +2,21 @@
 
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
-import { MAX_CLAIM } from '@/lib/game'
 
 const OPTIONS = [
   {
+    game: '904',
     count: 4,
     deck: '24-card deck',
     ranks: '2 · 3 · J · 9 · A · 10',
     blurb: 'Classic short deck. Every card carries points.',
   },
   {
+    game: 'Rani',
     count: 6,
-    deck: '36-card deck',
-    ranks: '2 · 3 · J · 9 · A · 10 · K · Q · 8',
-    blurb: 'Adds K, Q and 8 for the full 904-point spread.',
+    deck: 'Coming soon',
+    ranks: 'A new thinnai game',
+    blurb: 'This game will be available soon.',
   },
 ] as const
 
@@ -28,11 +29,10 @@ export function ConfigMenu({ onStart }: { onStart: (count: number, names: string
       <header className="text-center">
         <p className="mb-2 font-mono text-xs uppercase tracking-[0.35em] text-gold">Trick-Taking · Counter-Claim</p>
         <h1 className="text-balance font-serif text-6xl font-bold tracking-tight text-gold-soft sm:text-7xl">
-          Nine·Oh·Four
+          Thinnai
         </h1>
         <p className="mx-auto mt-4 max-w-md text-pretty text-sm leading-relaxed text-muted-foreground">
-          Bid your way to the claim, hide your trump, and take the tricks. First team to secure their claim toward the
-          strict {MAX_CLAIM}-point target wins the hand.
+          Choose a game, gather everyone around, and let the thinnai decide who takes the tricks.
         </p>
       </header>
 
@@ -41,24 +41,26 @@ export function ConfigMenu({ onStart }: { onStart: (count: number, names: string
           <button
             key={opt.count}
             type="button"
-            onClick={() => setCount(opt.count)}
+            onClick={() => opt.game === '904' && setCount(opt.count)}
+            disabled={opt.game === 'Rani'}
             className={cn(
-              'group flex flex-col items-start gap-3 rounded-2xl border border-border bg-secondary/60 p-6 text-left',
-              count === opt.count && 'border-gold bg-secondary',
+              'group flex min-w-0 flex-col items-start gap-3 rounded-2xl border border-border bg-secondary/60 p-5 text-left sm:p-6',
+              opt.game === 'Rani' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+              count === opt.count && opt.game === '904' && 'border-gold bg-secondary',
               'transition-all hover:-translate-y-1 hover:border-gold hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
             )}
           >
             <div className="flex w-full items-center justify-between">
-              <span className="font-serif text-4xl font-bold text-gold-soft">{opt.count}</span>
+              <span className="font-serif text-4xl font-bold text-gold-soft">{opt.game}</span>
               <span className="rounded-full border border-gold/40 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-gold">
                 {opt.deck}
               </span>
             </div>
-            <span className="text-lg font-semibold text-foreground">{opt.count} Players</span>
-            <span className="font-mono text-xs tracking-wide text-muted-foreground">{opt.ranks}</span>
+            <span className="text-lg font-semibold text-foreground">{opt.game === 'Rani' ? 'Coming soon' : 'Card game'}</span>
+            <span className="break-words font-mono text-xs tracking-wide text-muted-foreground">{opt.ranks}</span>
             <span className="text-sm leading-relaxed text-muted-foreground">{opt.blurb}</span>
             <span className="mt-2 text-sm font-semibold text-gold transition-transform group-hover:translate-x-1">
-              Deal the cards &rarr;
+              {opt.game === 'Rani' ? 'Coming soon' : 'Set up 904 →'}
             </span>
           </button>
         ))}

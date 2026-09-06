@@ -27,7 +27,7 @@ function Seat({ seat }: { seat: SeatView }) {
   return (
     <div
       className={cn(
-        'flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5 rounded-xl border bg-felt-dark/80 px-2 py-2 text-center backdrop-blur-sm transition-all',
+        'flex w-24 max-w-[30vw] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded-xl border bg-felt-dark/80 px-1.5 py-1.5 text-center backdrop-blur-sm transition-all sm:w-28 sm:gap-1.5 sm:px-2 sm:py-2',
         seat.isCurrent
           ? 'border-gold bg-gold/10 shadow-[0_0_0_2px_var(--gold),0_8px_30px_var(--team-a-glow)]'
           : seat.team === 0
@@ -37,14 +37,18 @@ function Seat({ seat }: { seat: SeatView }) {
     >
       <div className="flex items-center gap-1.5">
         <span className={cn('h-2 w-2 rounded-full', seat.team === 0 ? 'bg-team-a' : 'bg-team-b')} aria-hidden />
-        <span className="truncate text-xs font-semibold text-foreground">{seat.name}</span>
+        <span className="max-w-[22vw] truncate text-[10px] font-semibold text-foreground sm:max-w-24 sm:text-xs">{seat.name}</span>
       </div>
 
       <div className="flex h-8 items-center justify-center">
         {seat.handCount > 0 ? (
-          <div className="flex items-center gap-2">
-            <CardBack size="sm" className="h-8 w-6" />
-            <span className="font-mono text-[10px] font-semibold text-muted-foreground">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <div className="flex h-7 items-center sm:h-8">
+              {[0, 1, 2].map((slot) => (
+                <CardBack key={slot} size="sm" className={cn('h-7 w-4 sm:h-8 sm:w-5', slot > 0 && '-ml-2 sm:-ml-3')} />
+              ))}
+            </div>
+            <span className="whitespace-nowrap font-mono text-[9px] font-semibold text-muted-foreground sm:text-[10px]">
               {seat.handCount} {seat.handCount === 1 ? 'card' : 'cards'}
             </span>
           </div>
@@ -115,11 +119,11 @@ export function GameTable({
   }, [trumpRevealed])
 
   return (
-    <div className="relative mx-auto h-[440px] w-full max-w-3xl sm:h-[560px]">
+    <div className="relative mx-auto h-[360px] w-full max-w-3xl sm:h-[560px]">
       {/* felt surface */}
-      <div className="absolute inset-6 rounded-[45%] border-4 border-gold/40 bg-[radial-gradient(ellipse_at_center,var(--felt)_0%,var(--felt-dark)_100%)] shadow-[inset_0_0_80px_rgba(0,0,0,0.5),0_12px_50px_rgba(0,0,0,0.25)]">
-        <div className="absolute inset-4 rounded-[45%] border border-team-b/30" />
-        <div className="absolute inset-8 rounded-[45%] border border-team-a/20" />
+      <div className="absolute inset-3 rounded-[42%] border-2 border-gold/40 bg-[radial-gradient(ellipse_at_center,var(--felt)_0%,var(--felt-dark)_100%)] shadow-[inset_0_0_50px_rgba(0,0,0,0.5),0_12px_50px_rgba(0,0,0,0.25)] sm:inset-6 sm:rounded-[45%] sm:border-4">
+        <div className="absolute inset-2 rounded-[42%] border border-team-b/30 sm:inset-4 sm:rounded-[45%]" />
+        <div className="absolute inset-4 rounded-[42%] border border-team-a/20 sm:inset-8 sm:rounded-[45%]" />
       </div>
 
       {/* trump indicator */}
@@ -147,7 +151,7 @@ export function GameTable({
       )}
 
       {/* central pile */}
-      <div className="absolute left-1/2 top-1/2 flex max-w-[65%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/10 px-4 py-3 shadow-inner">
+      <div className="absolute left-1/2 top-1/2 flex max-w-[72%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-1 rounded-xl border border-white/10 bg-black/10 px-2 py-2 shadow-inner sm:max-w-[65%] sm:gap-2 sm:rounded-2xl sm:px-4 sm:py-3">
         {trick.length === 0 ? (
           <span className="font-serif text-sm italic text-foreground/50">
             {banner ? '' : 'The pile is empty'}
