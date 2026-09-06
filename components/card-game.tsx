@@ -26,7 +26,7 @@ import { GameTable, type SeatView } from '@/components/game-table'
 import { CardBack, CardFace, ClickableCard } from '@/components/playing-card'
 import { StrongSupport } from '@/components/strong-support'
 
-type Phase = 'config' | 'bidding' | 'trump' | 'playing' | 'roundOver'
+type Phase = 'config' | 'dealing' | 'bidding' | 'trump' | 'playing' | 'roundOver'
 
 interface Player {
   name: string
@@ -35,6 +35,7 @@ interface Player {
 
 const PHASE_LABEL: Record<Phase, string> = {
   config: 'Setup',
+  dealing: 'Dealing',
   bidding: 'Bidding',
   trump: 'Trump Select',
   playing: 'Playing',
@@ -44,6 +45,8 @@ const PHASE_LABEL: Record<Phase, string> = {
 export function CardGame() {
   const [phase, setPhase] = useState<Phase>('config')
   const [players, setPlayers] = useState<Player[]>([])
+  const [dealPlan, setDealPlan] = useState<Player[] | null>(null)
+  const [dealBatch, setDealBatch] = useState(0)
   const [shuffler, setShuffler] = useState(0)
   const [current, setCurrent] = useState(0)
 
@@ -92,7 +95,9 @@ export function CardGame() {
       hand: sortHand(deck.slice(i * CARDS_PER_PLAYER, i * CARDS_PER_PLAYER + CARDS_PER_PLAYER)),
     }))
     const deal = Math.floor(Math.random() * count)
-    setPlayers(dealt)
+    setPlayers(dealt.map((player) => ({ ...player, hand: [] })))
+    setDealPlan(dealt)
+    setDealBatch(0)
     setShuffler(deal)
     setCurrent((deal + 1) % count)
     setPassed(Array(count).fill(false))
@@ -116,8 +121,30 @@ export function CardGame() {
     setDoubleCalled(false)
     setBanner(null)
     setResolving(false)
-    setPhase('bidding')
+    setPhase('dealing')
   }, [])
+
+  useEffect(() => {
+    if (phase !== 'dealing' || !dealPlan) return
+    if (dealBatch >= 2) {
+      setDealPlan(null)
+      setPhase('bidding')
+      return
+    }
+
+    const timer = setTimeout(() => {
+      const nextBatch = dealBatch + 1
+      setPlayers((current) =>
+        current.map((player, seat) => ({
+          ...player,
+          hand: dealPlan[seat].hand.slice(0, nextBatch * 3),
+        })),
+      )
+      setDealBatch(nextBatch)
+    }, 850)
+
+    return () => clearTimeout(timer)
+  }, [phase, dealBatch, dealPlan])
 
   const reshuffle = useCallback(() => {
     const names = players.map((player) => player.name)
@@ -445,7 +472,13 @@ export function CardGame() {
 
         {/* Hand */}
         <div className="flex min-h-36 items-end justify-center overflow-x-auto pb-2 pl-3">
-          {activePlayer?.hand.length ? (
+          {phase === 'dealing' ? (
+            <div className="flex items-end justify-center gap-1">
+              {Array.from({ length: activePlayer?.hand.length ?? 0 }).map((_, index) => (
+                <CardBack key={index} size="lg" className="animate-deal-card" />
+              ))}
+            </div>
+          ) : activePlayer?.hand.length ? (
             phase === 'playing' ? (
               activePlayer.hand.map((card) => (
                 <ClickableCard
@@ -477,6 +510,12 @@ export function CardGame() {
             </div>
           )}
         </div>
+
+        {phase === 'dealing' && (
+          <p className="mt-3 border-t border-border pt-3 text-center font-mono text-[11px] uppercase tracking-widest text-gold">
+            Dealing batch {Math.max(1, dealBatch)} of 2 · three cards each
+          </p>
+        )}
 
         {/* Play controls — the ask sits here, on its own row, so nothing can
             overlap it and the hit target is a comfortable size. */}

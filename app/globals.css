@@ -115,3 +115,18 @@
 .animate-ribbon {
   animation: ribbon-fall 1.7s ease-in forwards;
 }
+
+@keyframes deal-card {
+  0% {
+    opacity: 0;
+    transform: translateY(-18px) rotate(-4deg) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+.animate-deal-card {
+  animation: deal-card 420ms ease-out both;
+}
