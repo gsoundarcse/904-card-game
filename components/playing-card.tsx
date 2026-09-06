@@ -57,7 +57,15 @@ export function CardFace({
   )
 }
 
-export function CardBack({ size = 'md', className }: { size?: Size; className?: string }) {
+export function CardBack({
+  size = 'md',
+  className,
+  showLabel = true,
+}: {
+  size?: Size
+  className?: string
+  showLabel?: boolean
+}) {
   return (
     <div
       className={cn(
@@ -67,7 +75,7 @@ export function CardBack({ size = 'md', className }: { size?: Size; className?: 
         className,
       )}
     >
-      <span className="font-serif text-xs font-bold tracking-widest text-gold/80">904</span>
+      {showLabel && <span className="font-serif text-xs font-bold tracking-widest text-gold/80">904</span>}
     </div>
   )
 }

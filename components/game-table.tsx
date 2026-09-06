@@ -45,7 +45,12 @@ function Seat({ seat }: { seat: SeatView }) {
           <div className="flex min-w-0 items-center gap-1.5">
             <div className="flex h-7 items-center sm:h-8">
               {[0, 1, 2].map((slot) => (
-                <CardBack key={slot} size="sm" className={cn('h-7 w-4 sm:h-8 sm:w-5', slot > 0 && '-ml-2 sm:-ml-3')} />
+                <CardBack
+                  key={slot}
+                  size="sm"
+                  showLabel={false}
+                  className={cn('h-7 w-4 sm:h-8 sm:w-5', slot > 0 && '-ml-2 sm:-ml-3')}
+                />
               ))}
             </div>
             <span className="whitespace-nowrap font-mono text-[9px] font-semibold text-muted-foreground sm:text-[10px]">
