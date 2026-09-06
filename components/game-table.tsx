@@ -133,7 +133,7 @@ export function GameTable({
 
       {/* trump indicator */}
       {showTrumpIndicator && (
-        <div className="absolute left-1/2 top-[8%] flex -translate-x-1/2 flex-col items-center gap-1">
+        <div className="absolute left-1/2 top-[24%] z-10 flex -translate-x-1/2 flex-col items-center gap-1 sm:top-[18%]">
           <span className="font-mono text-[10px] uppercase tracking-widest text-gold">Trump</span>
           <div className="relative">
             <MysteryCard size="sm" revealed={trumpRevealed} card={trumpRevealed ? displayTrumpCard : null} />
@@ -184,7 +184,7 @@ export function GameTable({
 
       {/* seats */}
       {seats.map((seat, i) => (
-        <div key={i} className="absolute" style={seatPosition(i, seats.length)}>
+        <div key={i} className="absolute z-20" style={seatPosition(i, seats.length)}>
           <Seat seat={seat} />
         </div>
       ))}
