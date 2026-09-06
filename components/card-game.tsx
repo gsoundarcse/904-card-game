@@ -47,8 +47,11 @@ export function CardGame() {
   const [shuffler, setShuffler] = useState(0)
   const [current, setCurrent] = useState(0)
 
-  // bidding
+  // bidding — exactly one pass around the table, starting left of the dealer
   const [passed, setPassed] = useState<boolean[]>([])
+  const [bids, setBids] = useState<(number | null)[]>([])
+  /** How many seats have already acted this round. Bidding ends at n. */
+  const [bidTurn, setBidTurn] = useState(0)
   const [highBid, setHighBid] = useState(0)
   const [highBidder, setHighBidder] = useState<number | null>(null)
   const [pendingBid, setPendingBid] = useState(MIN_CLAIM)
@@ -87,6 +90,8 @@ export function CardGame() {
     setShuffler(deal)
     setCurrent((deal + 1) % count)
     setPassed(Array(count).fill(false))
+    setBids(Array(count).fill(null))
+    setBidTurn(0)
     setHighBid(0)
     setHighBidder(null)
     setPendingBid(MIN_CLAIM)
@@ -111,57 +116,62 @@ export function CardGame() {
     setPendingBid(Math.min(MAX_CLAIM, highBid > 0 ? highBid + CLAIM_STEP : MIN_CLAIM))
   }, [phase, current, highBid])
 
-  const nextActiveBidder = useCallback(
-    (from: number, passedState: boolean[]) => {
-      let i = from
-      for (let step = 0; step < passedState.length; step++) {
-        i = (i + 1) % passedState.length
-        if (!passedState[i]) return i
-      }
-      return from
-    },
-    [],
-  )
-
   const finalizeClaimer = useCallback((seat: number, amount: number) => {
     setClaimer(seat)
     setClaim(amount)
     setPhase('trump')
   }, [])
 
+  /** True while the seat on turn is the final one to act and nobody has bid yet. */
+  const isForcedClaim = phase === 'bidding' && n > 0 && bidTurn === n - 1 && highBidder === null
+
+  /**
+   * Record one seat's action and move on. Bidding is a single lap: once every
+   * seat has acted exactly once, the highest bid on the table wins the claim.
+   */
+  const advanceBidding = useCallback(
+    (
+      nextPassed: boolean[],
+      nextBids: (number | null)[],
+      topBid: number,
+      topSeat: number | null,
+    ) => {
+      setPassed(nextPassed)
+      setBids(nextBids)
+
+      const turn = bidTurn + 1
+      if (turn < n) {
+        setBidTurn(turn)
+        setCurrent((current + 1) % n)
+        return
+      }
+
+      // Lap complete. The last seat is never allowed to pass without a bid on
+      // the table, so topSeat is non-null here; fall back defensively anyway.
+      if (topSeat !== null) finalizeClaimer(topSeat, topBid)
+      else finalizeClaimer(current, MIN_CLAIM)
+    },
+    [bidTurn, n, current, finalizeClaimer],
+  )
+
   const handlePass = useCallback(() => {
     if (phase !== 'bidding') return
-    const newPassed = [...passed]
-    newPassed[current] = true
-    const remaining = newPassed.map((p, i) => (!p ? i : -1)).filter((i) => i >= 0)
-
-    if (remaining.length === 1 && highBidder !== null) {
-      setPassed(newPassed)
-      finalizeClaimer(remaining[0], highBid)
-      return
-    }
-    setPassed(newPassed)
-    if (remaining.length === 1) {
-      // Only one bidder left but no claim yet: they must claim next.
-      setCurrent(remaining[0])
-    } else {
-      setCurrent(nextActiveBidder(current, newPassed))
-    }
-  }, [phase, passed, current, highBidder, highBid, finalizeClaimer, nextActiveBidder])
+    if (isForcedClaim) return
+    const nextPassed = [...passed]
+    nextPassed[current] = true
+    advanceBidding(nextPassed, bids, highBid, highBidder)
+  }, [phase, isForcedClaim, passed, bids, current, highBid, highBidder, advanceBidding])
 
   const handleClaim = useCallback(
     (amount: number) => {
       if (phase !== 'bidding') return
+      const nextBids = [...bids]
+      nextBids[current] = amount
       setHighBid(amount)
       setHighBidder(current)
-      const remaining = passed.map((p, i) => (!p ? i : -1)).filter((i) => i >= 0)
-      if (remaining.length === 1) {
-        finalizeClaimer(current, amount)
-        return
-      }
-      setCurrent(nextActiveBidder(current, passed))
+      advanceBidding(passed, nextBids, amount, current)
     },
-    [phase, current, passed, finalizeClaimer, nextActiveBidder],
+    [phase, current, passed, bids, advanceBidding],
   )
 
   const handleSelectTrump = useCallback((suit: Suit) => {
@@ -253,9 +263,9 @@ export function CardGame() {
         let status: string | undefined
         if (phase === 'bidding') {
           if (passed[i]) status = 'Passed'
-          else if (highBidder === i) status = `Bid ${highBid}`
+          else if (bids[i] != null) status = `Bid ${bids[i]}`
           else if (i === current) status = 'Deciding'
-          else status = 'In'
+          else status = 'Waiting'
         } else if (phase === 'playing' && i === current && !resolving) {
           status = 'Turn'
         }
@@ -269,7 +279,7 @@ export function CardGame() {
           status,
         }
       }),
-    [players, phase, passed, highBidder, highBid, current, resolving, claimer, shuffler],
+    [players, phase, passed, bids, current, resolving, claimer, shuffler],
   )
 
   if (phase === 'config') {
@@ -283,8 +293,8 @@ export function CardGame() {
   const activePlayer = players[current]
   const minAllowed = Math.min(MAX_CLAIM, highBid > 0 ? highBid + CLAIM_STEP : MIN_CLAIM)
   const canClaim = minAllowed <= MAX_CLAIM
-  const remainingBidders = passed.filter((p) => !p).length
-  const mustClaim = phase === 'bidding' && remainingBidders === 1 && highBidder === null
+  const mustClaim = isForcedClaim
+  const bidsLeft = phase === 'bidding' ? n - bidTurn : 0
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-5xl flex-col gap-4 px-3 py-4 sm:px-6 sm:py-6">
@@ -383,10 +393,13 @@ export function CardGame() {
             </button>
             <p className="w-full text-center font-mono text-[11px] text-muted-foreground">
               {mustClaim
-                ? 'You are the last bidder — you must claim.'
+                ? 'Last to act and no bid on the table — you must claim.'
                 : highBid > 0
-                  ? `High bid ${highBid} by ${players[highBidder as number].name}. Counter must be +${CLAIM_STEP} or more.`
+                  ? `High bid ${highBid} by ${players[highBidder as number].name}. Yours must be +${CLAIM_STEP} or more.`
                   : `Opening claim starts at ${MIN_CLAIM}. Max ${MAX_CLAIM}.`}
+            </p>
+            <p className="w-full text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+              One round of bidding · {bidsLeft} {bidsLeft === 1 ? 'seat' : 'seats'} left to act
             </p>
           </div>
         )}
@@ -396,6 +409,7 @@ export function CardGame() {
         <TrumpModal
           claimerName={players[claimer].name}
           claim={claim}
+          hand={players[claimer].hand}
           hidden={trumpHidden}
           onPeek={() => setTrumpHidden((h) => !h)}
           onSelect={handleSelectTrump}
@@ -439,19 +453,21 @@ function PlayHint({
 function TrumpModal({
   claimerName,
   claim,
+  hand,
   hidden,
   onPeek,
   onSelect,
 }: {
   claimerName: string
   claim: number
+  hand: Card[]
   hidden: boolean
   onPeek: () => void
   onSelect: (suit: Suit) => void
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border-2 border-gold/50 bg-popover p-6 text-center shadow-2xl">
+      <div className="max-h-[92svh] w-full max-w-lg overflow-y-auto rounded-2xl border-2 border-gold/50 bg-popover p-6 text-center shadow-2xl">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">Secure Prompt</p>
         <h2 className="mt-2 font-serif text-3xl font-bold text-gold-soft">{claimerName} is the Claimer</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -468,25 +484,46 @@ function TrumpModal({
             Tap to open (make sure others look away)
           </button>
         ) : (
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            {SUITS.map((suit) => {
-              const red = suit === 'Hearts' || suit === 'Diamonds'
-              return (
-                <button
-                  key={suit}
-                  type="button"
-                  onClick={() => onSelect(suit)}
-                  className={cn(
-                    'flex items-center justify-center gap-2 rounded-xl border border-border bg-card py-5 text-2xl font-bold text-card-foreground transition-all hover:-translate-y-0.5 hover:border-gold hover:ring-2 hover:ring-gold',
-                    red && 'text-suit-red',
-                  )}
-                >
-                  <span>{SUIT_SYMBOL[suit]}</span>
-                  <span className="text-base">{suit}</span>
-                </button>
-              )
-            })}
-          </div>
+          <>
+            {/* Full hand stays visible so the trump choice is an informed one. */}
+            <div className="mt-5 rounded-xl border border-border bg-background/40 p-3">
+              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Your hand</p>
+              <div className="flex items-end justify-center overflow-x-auto pb-1 pl-3">
+                {hand.map((card) => (
+                  <div key={card.id} className="-ml-3 shrink-0 first:ml-0">
+                    <CardFace card={card} size="md" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              {SUITS.map((suit) => {
+                const red = suit === 'Hearts' || suit === 'Diamonds'
+                const held = hand.filter((c) => c.suit === suit)
+                const points = held.reduce((sum, c) => sum + c.points, 0)
+                return (
+                  <button
+                    key={suit}
+                    type="button"
+                    onClick={() => onSelect(suit)}
+                    className={cn(
+                      'flex flex-col items-center justify-center gap-1 rounded-xl border border-border bg-card py-4 font-bold text-card-foreground transition-all hover:-translate-y-0.5 hover:border-gold hover:ring-2 hover:ring-gold',
+                      red && 'text-suit-red',
+                    )}
+                  >
+                    <span className="flex items-center gap-2 text-2xl">
+                      <span>{SUIT_SYMBOL[suit]}</span>
+                      <span className="text-base">{suit}</span>
+                    </span>
+                    <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      {held.length} held · {points} pts
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>
