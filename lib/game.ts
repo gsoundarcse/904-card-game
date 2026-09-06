@@ -93,24 +93,27 @@ export function sortHand(hand: Card[]): Card[] {
 export interface PlayableResult {
   /** Card ids the active player is currently allowed to drop. */
   playableIds: Set<string>
-  /** True when resolving this player's options exposes the hidden trump. */
-  revealsTrump: boolean
-  reason: 'lead' | 'follow' | 'forced-trump' | 'free-discard'
+  /** True when this player is void in the led suit and could ask for trump. */
+  canAskTrump: boolean
+  reason: 'lead' | 'follow' | 'void'
 }
 
 /**
- * Determine which cards the active player may legally play given the current
- * trick, the (possibly still hidden) trump suit, and whether trump is revealed.
+ * Determine which cards the active player may legally play.
+ *
+ * Following the led suit is the only hard constraint. A player void in the led
+ * suit may drop anything at all — trump or plain discard, their choice. Asking
+ * for trump is an option offered to a void player, never a requirement, and it
+ * does not restrict what they may then play.
  */
 export function getPlayable(
   hand: Card[],
   trick: TrickPlay[],
-  trumpSuit: Suit | null,
   trumpRevealed: boolean,
 ): PlayableResult {
   // Leading the trick: any card is allowed.
   if (trick.length === 0) {
-    return { playableIds: new Set(hand.map((c) => c.id)), revealsTrump: false, reason: 'lead' }
+    return { playableIds: new Set(hand.map((c) => c.id)), canAskTrump: false, reason: 'lead' }
   }
 
   const ledSuit = trick[0].card.suit
@@ -118,20 +121,11 @@ export function getPlayable(
 
   // Must follow the led suit when possible.
   if (ledCards.length > 0) {
-    return { playableIds: new Set(ledCards.map((c) => c.id)), revealsTrump: false, reason: 'follow' }
+    return { playableIds: new Set(ledCards.map((c) => c.id)), canAskTrump: false, reason: 'follow' }
   }
 
-  // Out of the led suit -> trump becomes (or already is) revealed.
-  const revealsTrump = !trumpRevealed
-  const trumpCards = trumpSuit ? hand.filter((c) => c.suit === trumpSuit) : []
-
-  if (trumpCards.length > 0) {
-    // Forced trump: only trump cards may be dropped.
-    return { playableIds: new Set(trumpCards.map((c) => c.id)), revealsTrump, reason: 'forced-trump' }
-  }
-
-  // No trump in hand: free to discard anything.
-  return { playableIds: new Set(hand.map((c) => c.id)), revealsTrump, reason: 'free-discard' }
+  // Void in the led suit: free choice, plus the option to ask for trump.
+  return { playableIds: new Set(hand.map((c) => c.id)), canAskTrump: !trumpRevealed, reason: 'void' }
 }
 
 /** Returns the seat index that wins the completed trick. */
@@ -152,4 +146,128 @@ export function evaluateTrick(
 
 export function trickPoints(trick: TrickPlay[]): number {
   return trick.reduce((sum, p) => sum + p.card.points, 0)
+}
+
+// ---------------------------------------------------------------------------
+// Match settlement
+//
+// A round does not produce a running score. It produces *cards*, handed to one
+// team as a penalty. They accumulate across rounds; a team that collects enough
+// loses the match.
+// ---------------------------------------------------------------------------
+
+/** Bids at or above this are "big" and settle harder in both directions. */
+export const BIG_BID = 700
+
+/** Cards for a made claim, paid by the opponents. */
+export const WIN_CARDS = { small: 1, big: 3 } as const
+/** Cards for a failed claim, paid by the claiming team. */
+export const LOSS_CARDS = { small: 2, big: 3 } as const
+/** Cards for a double that did not come off. Replaces the whole settlement. */
+export const WRONG_DOUBLE_CARDS = { small: 3, big: 4 } as const
+/** Added to a made claim when the claimer called double and swept. */
+export const DOUBLE_BONUS = 1
+/** Added when a failed claimer could not capture half their claim. */
+export const SHORTFALL_BONUS = 1
+
+/** Cards a team must accumulate to lose the match. */
+export function cardLimit(playerCount: number): number {
+  return playerCount >= 6 ? 7 : 5
+}
+
+/** Seat numbers (1-based, for display) belonging to each team. */
+export function teamMembers(playerCount: number): [number[], number[]] {
+  const a: number[] = []
+  const b: number[] = []
+  for (let seat = 0; seat < playerCount; seat++) {
+    ;(teamOf(seat) === 0 ? a : b).push(seat + 1)
+  }
+  return [a, b]
+}
+
+/** "Team A (P1, P3)" — teams are always named alongside their members. */
+export function teamLabel(team: 0 | 1, playerCount: number): string {
+  const members = teamMembers(playerCount)[team]
+  return `${TEAM_NAME[team]} (${members.map((p) => `P${p}`).join(', ')})`
+}
+
+export interface Settlement {
+  success: boolean
+  /** Team that receives the penalty cards. */
+  penalisedTeam: 0 | 1
+  cards: number
+  /** Human-readable breakdown, one line per contributing rule. */
+  reasons: string[]
+}
+
+export interface SettleInput {
+  claim: number
+  claimerTeam: 0 | 1
+  /** Points captured by the claiming team. */
+  captured: number
+  /** Tricks won by [team A, team B]. */
+  teamTricks: [number, number]
+  /** True when the claimer called double on their last card. */
+  doubleCalled: boolean
+}
+
+/**
+ * Work out who takes cards for a finished round, and how many.
+ *
+ * A called double short-circuits everything: if the claiming team swept all six
+ * tricks it pays the normal win plus one, otherwise it replaces the settlement
+ * with a flat penalty against the claiming team.
+ */
+export function settleRound({
+  claim,
+  claimerTeam,
+  captured,
+  teamTricks,
+  doubleCalled,
+}: SettleInput): Settlement {
+  const opponents = (1 - claimerTeam) as 0 | 1
+  const big = claim >= BIG_BID
+  const totalTricks = teamTricks[0] + teamTricks[1]
+  const swept = totalTricks > 0 && teamTricks[claimerTeam] === totalTricks
+
+  if (doubleCalled) {
+    if (swept) {
+      const base = big ? WIN_CARDS.big : WIN_CARDS.small
+      return {
+        success: true,
+        penalisedTeam: opponents,
+        cards: base + DOUBLE_BONUS,
+        reasons: [
+          `Claim of ${claim} made — ${base} card${base === 1 ? '' : 's'}`,
+          `Double called and every trick taken — +${DOUBLE_BONUS} card`,
+        ],
+      }
+    }
+    const cards = big ? WRONG_DOUBLE_CARDS.big : WRONG_DOUBLE_CARDS.small
+    return {
+      success: false,
+      penalisedTeam: claimerTeam,
+      cards,
+      reasons: [`Double called and missed — ${cards} cards, settlement replaced`],
+    }
+  }
+
+  const success = captured >= claim
+  if (success) {
+    const cards = big ? WIN_CARDS.big : WIN_CARDS.small
+    return {
+      success: true,
+      penalisedTeam: opponents,
+      cards,
+      reasons: [`Claim of ${claim} made with ${captured} — ${cards} card${cards === 1 ? '' : 's'}`],
+    }
+  }
+
+  let cards = big ? LOSS_CARDS.big : LOSS_CARDS.small
+  const reasons = [`Claim of ${claim} failed with ${captured} — ${cards} cards`]
+  if (captured < claim / 2) {
+    cards += SHORTFALL_BONUS
+    reasons.push(`Under half the claim — +${SHORTFALL_BONUS} card`)
+  }
+  return { success: false, penalisedTeam: claimerTeam, cards, reasons }
 }

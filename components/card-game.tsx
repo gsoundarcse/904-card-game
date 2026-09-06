@@ -191,22 +191,19 @@ export function CardGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
-  // Reveal the hidden trump the moment the active player is void in the led suit.
-  useEffect(() => {
-    if (phase !== 'playing' || resolving || trumpRevealed) return
-    if (trick.length === 0 || !players[current]) return
-    const ledSuit = trick[0].card.suit
-    const hasLed = players[current].hand.some((c) => c.suit === ledSuit)
-    if (!hasLed) {
-      setTrumpRevealed(true)
-      setTempBanner('Trump Suit Revealed!')
-    }
-  }, [phase, current, trick, trumpRevealed, resolving, players, setTempBanner])
-
   const playable = useMemo(() => {
     if (phase !== 'playing' || !players[current]) return null
-    return getPlayable(players[current].hand, trick, trumpSuit, trumpRevealed)
-  }, [phase, players, current, trick, trumpSuit, trumpRevealed])
+    return getPlayable(players[current].hand, trick, trumpRevealed)
+  }, [phase, players, current, trick, trumpRevealed])
+
+  // Asking for trump is the player's choice, never automatic. It reveals the
+  // suit to everyone and does not oblige the asker to then play a trump.
+  const handleAskTrump = useCallback(() => {
+    if (phase !== 'playing' || resolving || trumpRevealed) return
+    if (!playable?.canAskTrump) return
+    setTrumpRevealed(true)
+    setTempBanner('Trump Suit Revealed!')
+  }, [phase, resolving, trumpRevealed, playable, setTempBanner])
 
   const resolveTrick = useCallback(
     (finalTrick: TrickPlay[]) => {
@@ -321,9 +318,18 @@ export function CardGame() {
               {TEAM_NAME[teamOf(current)]}
             </span>
           </div>
-          {playable && (
-            <PlayHint reason={playable.reason} trumpRevealed={trumpRevealed} />
-          )}
+          <div className="flex items-center gap-2">
+            {playable?.canAskTrump && (
+              <button
+                type="button"
+                onClick={handleAskTrump}
+                className="rounded-full border border-gold/60 bg-gold/10 px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wide text-gold transition-colors hover:bg-gold/20"
+              >
+                Ask for trump
+              </button>
+            )}
+            {playable && <PlayHint reason={playable.reason} trumpRevealed={trumpRevealed} />}
+          </div>
         </div>
 
         {/* Hand */}
@@ -434,14 +440,13 @@ function PlayHint({
   reason,
   trumpRevealed,
 }: {
-  reason: 'lead' | 'follow' | 'forced-trump' | 'free-discard'
+  reason: 'lead' | 'follow' | 'void'
   trumpRevealed: boolean
 }) {
   const map: Record<typeof reason, string> = {
     lead: 'Lead any card',
     follow: 'You must follow the led suit',
-    'forced-trump': 'Void in suit — you must play trump',
-    'free-discard': trumpRevealed ? 'No trump — discard anything' : 'Void in suit — discard anything',
+    void: trumpRevealed ? 'Void in suit — play anything' : 'Void in suit — play anything, or ask for trump',
   }
   return (
     <span className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 font-mono text-[11px] text-gold">

@@ -59,6 +59,13 @@ export function ConfigMenu({ onStart }: { onStart: (count: number) => void }) {
         ))}
       </div>
 
+      <a
+        href="/thinnai"
+        className="rounded-xl border border-gold/50 px-6 py-3 text-sm font-bold uppercase tracking-wide text-gold transition-colors hover:bg-gold/10"
+      >
+        Play online at a thinnai &rarr;
+      </a>
+
       <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1 font-mono text-[11px] text-muted-foreground">
         <li>2 = 100</li>
         <li>3 = 50</li>
