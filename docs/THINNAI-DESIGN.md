@@ -181,13 +181,18 @@ type Action =
   | { type: 'pass' }
   | { type: 'selectTrump'; suit: Suit }     // claimer only
   | { type: 'askTrump' }                    // void player only, optional
-  | { type: 'playCard'; cardId: string }
+  | { type: 'playCard'; cardId: string; double?: boolean }
   | { type: 'nextRound' }                   // host only, after a round settles
 ```
 
 Every action runs the same guard: is the room in the right status, is the caller
 who they claim to be, is it their turn, is the move legal. Anything else is a
 `409` with a reason, and the client shows it rather than silently desyncing.
+
+`double` rides along with `playCard` rather than being its own action, because
+the call has to be atomic with dropping the card — a separate request would let
+the claimer declare, see the result, and never send the card. The server accepts
+the flag only from the claimer, only on their sixth and final card.
 
 ### Polling protocol
 
@@ -242,25 +247,40 @@ the next trick. Enforced server-side by `round.current`.
 
 Cards are the score. They accumulate on the team that lost the exchange.
 
-| Outcome | Cards | Who takes them |
-|---|---|---|
-| Claim made, bid under 700 | 1 | opponents |
-| Claim made, bid 700 or more | 3 | opponents |
-| Claim failed | 2 | claiming team |
+| Outcome | Bid | Cards | Who takes them |
+|---|---|---|---|
+| Claim made | under 700 | 1 | opponents |
+| Claim made | 700 or more | 3 | opponents |
+| Claim failed | under 700 | 2 | claiming team |
+| Claim failed | 700 or more | 3 | claiming team |
 
-> ⚠️ **Two asymmetries you confirmed, restated so they are easy to spot.**
-> A win at 700+ costs **3**, not the 2 in your first message. And a failed claim
-> costs **2 flat** — a failed 800 bid costs no more than a failed 510. If either
-> should differ, both are single constants in `lib/game.ts`.
+Bonus, added on top:
 
-Bonuses, added on top:
-
-- **Double** — one team takes all six tricks: **+1 card** against the swept team.
 - **Shortfall** — a failed claimer who captured less than half their claim:
   **+1 card** against the claiming team.
 
-> ⚠️ *Assumption:* the double applies whichever team sweeps. If the defenders
-> take all six, the claiming team takes the extra card.
+### Double
+
+Double is **declared, not detected**. Nobody gets it for sweeping by accident.
+
+- **Only the claimer may call it** — personally. Their partner cannot, even
+  though the sweep is a team achievement.
+- **Called while playing their last card**, in the sixth trick. The button sits
+  beside the card, so the call is committed as the card is dropped — before the
+  trick resolves and before the claimer knows whether it lands.
+- **Correct** — the claiming team took all six tricks: **+1 card** on top of the
+  normal win. A win under 700 pays 2; a win at 700 or more pays 4.
+- **Wrong** — they did not take all six: the declaration **replaces the entire
+  settlement**. Flat **3 cards** under 700, **4 cards** at 700 or more, against
+  the claiming team. Nothing else applies, not even shortfall.
+
+A correct double always implies a made claim, since taking every trick captures
+every point in the deck. So the correct-double branch never has to consider
+failure.
+
+> *Note:* there is no automatic bonus for the defending team sweeping all six.
+> That case already shows up as a failed claim with the shortfall card attached,
+> since the claimer captured nothing.
 
 ### Ending the match
 
@@ -347,6 +367,6 @@ be wrong, and they are far cheaper to test as pure functions than through HTTP.
 ## 10. What I need from you
 
 1. **Redis or a long-lived Node host?** This is the only blocking question.
-2. Confirm the two flagged asymmetries in the card table, and the double
-   assumption.
-3. Anything in section 7 you want structured differently before I start.
+2. Anything in section 7 you want structured differently before I start.
+
+The card table and the double rules are settled as of this revision.
