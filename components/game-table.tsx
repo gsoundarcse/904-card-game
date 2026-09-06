@@ -27,7 +27,7 @@ function Seat({ seat }: { seat: SeatView }) {
   return (
     <div
       className={cn(
-        'flex w-24 max-w-[30vw] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded-xl border bg-felt-dark/80 px-1.5 py-1.5 text-center backdrop-blur-sm transition-all sm:w-28 sm:gap-1.5 sm:px-2 sm:py-2',
+        'flex w-28 max-w-[34vw] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5 rounded-2xl border bg-felt-dark/85 px-2 py-2 text-center backdrop-blur-sm transition-all sm:w-36 sm:gap-2 sm:px-3 sm:py-3',
         seat.isCurrent
           ? 'border-gold bg-gold/10 shadow-[0_0_0_2px_var(--gold),0_8px_30px_var(--team-a-glow)]'
           : seat.team === 0
@@ -37,23 +37,23 @@ function Seat({ seat }: { seat: SeatView }) {
     >
       <div className="flex items-center gap-1.5">
         <span className={cn('h-2 w-2 rounded-full', seat.team === 0 ? 'bg-team-a' : 'bg-team-b')} aria-hidden />
-        <span className="max-w-[22vw] truncate text-[10px] font-semibold text-foreground sm:max-w-24 sm:text-xs">{seat.name}</span>
+        <span className="max-w-[28vw] truncate text-xs font-semibold text-foreground sm:max-w-32 sm:text-sm">{seat.name}</span>
       </div>
 
       <div className="flex h-8 items-center justify-center">
         {seat.handCount > 0 ? (
           <div className="flex min-w-0 items-center gap-1.5">
-            <div className="flex h-7 items-center sm:h-8">
+            <div className="flex h-9 items-center sm:h-10">
               {[0, 1, 2].map((slot) => (
                 <CardBack
                   key={slot}
                   size="sm"
                   showLabel={false}
-                  className={cn('h-7 w-4 sm:h-8 sm:w-5', slot > 0 && '-ml-2 sm:-ml-3')}
+                  className={cn('h-9 w-5 sm:h-10 sm:w-6', slot > 0 && '-ml-2.5 sm:-ml-3')}
                 />
               ))}
             </div>
-            <span className="whitespace-nowrap font-mono text-[9px] font-semibold text-muted-foreground sm:text-[10px]">
+            <span className="whitespace-nowrap font-mono text-[10px] font-semibold text-muted-foreground sm:text-xs">
               {seat.handCount} {seat.handCount === 1 ? 'card' : 'cards'}
             </span>
           </div>
@@ -76,7 +76,7 @@ function Seat({ seat }: { seat: SeatView }) {
         {seat.status && (
           <span
             className={cn(
-              'rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
+              'rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide',
               seat.status === 'Passed'
                 ? 'bg-destructive/20 text-destructive'
                 : seat.isCurrent
@@ -136,7 +136,7 @@ export function GameTable({
         <div className="absolute left-1/2 top-[24%] z-10 flex -translate-x-1/2 flex-col items-center gap-1 sm:top-[18%]">
           <span className="font-mono text-[10px] uppercase tracking-widest text-gold">Trump</span>
           <div className="relative">
-            <MysteryCard size="sm" revealed={trumpRevealed} card={trumpRevealed ? displayTrumpCard : null} />
+            <MysteryCard size="md" revealed={trumpRevealed} card={trumpRevealed ? displayTrumpCard : null} />
             {trumpRevealed && (
               <button
                 type="button"
@@ -163,9 +163,9 @@ export function GameTable({
           </span>
         ) : (
           trick.map((play) => (
-            <div key={play.card.id} className="flex flex-col items-center gap-1">
-              <CardFace card={play.card} size="md" />
-              <span className="max-w-24 truncate font-mono text-[10px] font-semibold text-foreground/80">
+            <div key={play.card.id} className="flex flex-col items-center gap-1.5">
+              <CardFace card={play.card} size="lg" />
+              <span className="max-w-28 truncate font-mono text-xs font-semibold text-foreground/80">
                 {seats[play.player].name}
               </span>
             </div>
