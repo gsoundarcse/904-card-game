@@ -119,16 +119,16 @@ export function GameTable({
   }, [trumpRevealed])
 
   return (
-    <div className="relative mx-auto h-[360px] w-full max-w-3xl sm:h-[560px]">
+    <div className="relative mx-auto h-[380px] w-full max-w-4xl overflow-hidden rounded-3xl border border-team-b/30 bg-[linear-gradient(145deg,var(--felt-dark),var(--felt)_48%,var(--felt-dark))] shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:h-[560px]">
       {/* felt surface */}
-      <div className="absolute inset-3 rounded-[42%] border-2 border-gold/40 bg-[radial-gradient(ellipse_at_center,var(--felt)_0%,var(--felt-dark)_100%)] shadow-[inset_0_0_50px_rgba(0,0,0,0.5),0_12px_50px_rgba(0,0,0,0.25)] sm:inset-6 sm:rounded-[45%] sm:border-4">
-        <div className="absolute inset-2 rounded-[42%] border border-team-b/30 sm:inset-4 sm:rounded-[45%]" />
-        <div className="absolute inset-4 rounded-[42%] border border-team-a/20 sm:inset-8 sm:rounded-[45%]" />
+      <div className="absolute inset-3 rounded-2xl border border-gold/30 bg-[radial-gradient(ellipse_at_center,var(--felt)_0%,var(--felt-dark)_100%)] shadow-[inset_0_0_70px_rgba(0,0,0,0.4)] sm:inset-5 sm:rounded-3xl">
+        <div className="absolute inset-3 rounded-xl border border-team-b/25 sm:inset-5 sm:rounded-2xl" />
+        <div className="absolute inset-6 rounded-lg border border-team-a/15 sm:inset-10 sm:rounded-xl" />
       </div>
 
       {/* trump indicator */}
       {showTrumpIndicator && (
-        <div className="absolute left-1/2 top-[14%] flex -translate-x-1/2 flex-col items-center gap-1">
+        <div className="absolute left-1/2 top-[8%] flex -translate-x-1/2 flex-col items-center gap-1">
           <span className="font-mono text-[10px] uppercase tracking-widest text-gold">Trump</span>
           <div className="relative">
             <MysteryCard size="sm" revealed={trumpRevealed} card={trumpRevealed ? displayTrumpCard : null} />
@@ -151,7 +151,7 @@ export function GameTable({
       )}
 
       {/* central pile */}
-      <div className="absolute left-1/2 top-1/2 flex max-w-[72%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-1 rounded-xl border border-white/10 bg-black/10 px-2 py-2 shadow-inner sm:max-w-[65%] sm:gap-2 sm:rounded-2xl sm:px-4 sm:py-3">
+      <div className="absolute left-1/2 top-1/2 flex min-h-28 max-w-[72%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-1 rounded-xl border border-white/15 bg-black/15 px-2 py-2 shadow-[inset_0_0_24px_rgba(0,0,0,0.18)] sm:min-h-40 sm:max-w-[65%] sm:gap-2 sm:rounded-2xl sm:px-5 sm:py-4">
         {trick.length === 0 ? (
           <span className="font-serif text-sm italic text-foreground/50">
             {banner ? '' : 'The pile is empty'}
