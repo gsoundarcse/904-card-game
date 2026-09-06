@@ -24,6 +24,8 @@ export const SUIT_SYMBOL: Record<Suit, string> = {
 
 export const RED_SUITS: Suit[] = ['Hearts', 'Diamonds']
 
+const HAND_SUIT_ORDER: Suit[] = ['Spades', 'Hearts', 'Clubs', 'Diamonds']
+
 export const RANK_POINTS: Record<Rank, number> = {
   '2': 100,
   '3': 50,
@@ -85,7 +87,7 @@ export const TEAM_NAME = ['Team A', 'Team B'] as const
 
 export function sortHand(hand: Card[]): Card[] {
   return [...hand].sort((a, b) => {
-    if (a.suit !== b.suit) return SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit)
+    if (a.suit !== b.suit) return HAND_SUIT_ORDER.indexOf(a.suit) - HAND_SUIT_ORDER.indexOf(b.suit)
     return rankStrength(a.rank) - rankStrength(b.rank)
   })
 }

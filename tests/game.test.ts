@@ -90,12 +90,12 @@ describe('rank strength', () => {
 
 describe('sortHand', () => {
   it('groups by suit and orders by strength without mutating', () => {
-    const original = hand('Hearts-10', 'Spades-9', 'Hearts-2', 'Spades-3')
+    const original = hand('Diamonds-10', 'Clubs-9', 'Hearts-2', 'Spades-3')
     const snapshot = original.map((c) => c.id)
     const sorted = sortHand(original)
 
     assert.deepEqual(original.map((c) => c.id), snapshot, 'input untouched')
-    assert.deepEqual(sorted.map((c) => c.id), ['Spades-3', 'Spades-9', 'Hearts-2', 'Hearts-10'])
+    assert.deepEqual(sorted.map((c) => c.id), ['Spades-3', 'Hearts-2', 'Clubs-9', 'Diamonds-10'])
   })
 })
 

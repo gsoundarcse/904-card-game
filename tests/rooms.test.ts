@@ -11,7 +11,7 @@ import {
   type RoomPlayer,
   viewFor,
 } from '@/lib/server/rooms'
-import { buildDeck, CARDS_PER_PLAYER, MIN_CLAIM, teamOf } from '@/lib/game'
+import { buildDeck, CARDS_PER_PLAYER, MIN_CLAIM, type Suit, teamOf } from '@/lib/game'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,13 +53,36 @@ function dealtTable(seats = 4): Table {
   return t
 }
 
-/** Bid once around the table so a claimer exists, then pick trump. */
-function toPlayingPhase(t: Table, claimAmount = 520): Table {
+/**
+ * Make sure `seat` holds at least one card of `suit`, by swapping one in from
+ * another seat. Keeps the deck valid — no card is duplicated or lost.
+ */
+function ensureSuit(t: Table, seat: number, suit: Suit) {
+  const hands = t.room().round.hands
+  if (hands[seat].some((c) => c.suit === suit)) return
+  for (let other = 0; other < hands.length; other++) {
+    if (other === seat) continue
+    const idx = hands[other].findIndex((c) => c.suit === suit)
+    if (idx === -1) continue
+    const give = hands[other][idx]
+    hands[other][idx] = hands[seat][0]
+    hands[seat][0] = give
+    return
+  }
+  throw new Error(`no ${suit} anywhere in the deal`)
+}
+
+/** Bid once around the table, then set a card of `trumpSuit` face down. */
+function toPlayingPhase(t: Table, claimAmount = 520, trumpSuit: Suit = 'Hearts'): Table {
   const seats = t.room().seatCount
   const first = t.room().round.current
   t.act(first, { type: 'bid', amount: claimAmount })
   for (let i = 1; i < seats; i++) t.act((first + i) % seats, { type: 'pass' })
-  t.act(t.room().round.claimer!, { type: 'selectTrump', suit: 'Hearts' })
+
+  const claimer = t.room().round.claimer!
+  ensureSuit(t, claimer, trumpSuit)
+  const card = t.room().round.hands[claimer].find((c) => c.suit === trumpSuit)!
+  t.act(claimer, { type: 'selectTrump', cardId: card.id })
   return t
 }
 
@@ -81,6 +104,9 @@ function rig(t: Table, hands: Record<number, string[]>, onTurn: number) {
     })
   }
   r.round.current = onTurn
+  // Rigged hands are exact; a leftover face-down card would add a card nobody
+  // asked for. Tests that care about it set it explicitly.
+  r.round.trumpCard = null
 }
 
 /** Play the round out with random legal moves. Returns the finished room. */
@@ -312,25 +338,27 @@ describe('choosing trump', () => {
     for (let i = 1; i < 4; i++) t.act((first + i) % 4, { type: 'pass' })
 
     const claimer = t.room().round.claimer!
-    rejects(() => t.act((claimer + 1) % 4, { type: 'selectTrump', suit: 'Hearts' }), /claimer/)
-    t.act(claimer, { type: 'selectTrump', suit: 'Hearts' })
+    const mine = t.room().round.hands[claimer][0].id
+    rejects(() => t.act((claimer + 1) % 4, { type: 'selectTrump', cardId: mine }), /claimer/)
+    t.act(claimer, { type: 'selectTrump', cardId: mine })
     assert.equal(t.room().status, 'playing')
   })
 
-  it('rejects a suit that does not exist', () => {
+  it('rejects a card the claimer does not hold', () => {
     const t = dealtTable(4)
     const first = t.room().round.current
     t.act(first, { type: 'bid', amount: 520 })
     for (let i = 1; i < 4; i++) t.act((first + i) % 4, { type: 'pass' })
-    rejects(
-      () => t.act(t.room().round.claimer!, { type: 'selectTrump', suit: 'Swords' as never }),
-      /Unknown suit/,
-    )
+    const claimer = t.room().round.claimer!
+    const notMine = t.room().round.hands[(claimer + 1) % 4][0].id
+    rejects(() => t.act(claimer, { type: 'selectTrump', cardId: notMine }), /do not hold/)
+    rejects(() => t.act(claimer, { type: 'selectTrump', cardId: 'Spades-99' }), /do not hold/)
   })
 
-  it('hands the lead to the claimer', () => {
+  it('hands the first lead to the player right of the claimer', () => {
     const t = toPlayingPhase(dealtTable(4))
-    assert.equal(t.room().round.current, t.room().round.claimer)
+    const claimer = t.room().round.claimer!
+    assert.equal(t.room().round.current, (claimer - 1 + 4) % 4)
   })
 })
 
@@ -444,6 +472,19 @@ describe('playing cards', () => {
     assert.equal(r.round.current, r.round.lastTrick!.winner)
     assert.equal(r.round.trick.length, 0, 'table cleared')
   })
+
+  it('uses the trick winner for every lead after the opening trick', () => {
+    const t = toPlayingPhase(dealtTable(4))
+
+    for (let i = 0; i < 4; i++) {
+      const seat = t.room().round.current
+      const v = t.view(seat)
+      t.act(seat, { type: 'playCard', cardId: v.playableIds[0] })
+    }
+
+    const r = t.room()
+    assert.equal(r.round.current, r.round.lastTrick!.winner)
+  })
 })
 
 describe('asking for trump', () => {
@@ -503,6 +544,7 @@ describe('double', () => {
     const other = (claimer + 1) % 4
     // Put the other player on turn with a single card.
     r.round.current = other
+    r.round.trumpCard = null
     r.round.hands[other] = r.round.hands[other].slice(0, 1)
     rejects(
       () => t.act(other, { type: 'playCard', cardId: r.round.hands[other][0].id, double: true }),
@@ -514,6 +556,7 @@ describe('double', () => {
     const t = toPlayingPhase(dealtTable(4))
     const r = t.room()
     const claimer = r.round.claimer!
+    r.round.current = claimer
     assert.ok(r.round.hands[claimer].length > 1)
     rejects(
       () => t.act(claimer, { type: 'playCard', cardId: r.round.hands[claimer][0].id, double: true }),
@@ -526,6 +569,7 @@ describe('double', () => {
     const r = t.room()
     const claimer = r.round.claimer!
     r.round.current = claimer
+    r.round.trumpCard = null
     r.round.hands[claimer] = r.round.hands[claimer].slice(0, 1)
     const v = t.view(claimer)
     assert.equal(v.canCallDouble, true)
@@ -682,7 +726,9 @@ describe('across rounds', () => {
       const first = t.room().round.current
       t.act(first, { type: 'bid', amount: 520 })
       for (let i = 1; i < seats; i++) t.act((first + i) % seats, { type: 'pass' })
-      t.act(t.room().round.claimer!, { type: 'selectTrump', suit: 'Hearts' })
+      const cl = t.room().round.claimer!
+      ensureSuit(t, cl, 'Hearts')
+      t.act(cl, { type: 'selectTrump', cardId: t.room().round.hands[cl].find((c) => c.suit === 'Hearts')!.id })
       playOutRound(t)
       if (t.room().status === 'roundOver') t.act(0, { type: 'nextRound' })
     }
@@ -709,7 +755,9 @@ describe('across rounds', () => {
       const first = t.room().round.current
       t.act(first, { type: 'bid', amount: 520 })
       for (let i = 1; i < seats; i++) t.act((first + i) % seats, { type: 'pass' })
-      t.act(t.room().round.claimer!, { type: 'selectTrump', suit: 'Hearts' })
+      const cl = t.room().round.claimer!
+      ensureSuit(t, cl, 'Hearts')
+      t.act(cl, { type: 'selectTrump', cardId: t.room().round.hands[cl].find((c) => c.suit === 'Hearts')!.id })
       playOutRound(t)
       if (t.room().status === 'roundOver') t.act(0, { type: 'nextRound' })
     }
@@ -736,5 +784,124 @@ describe('version counter', () => {
     const before = t.room().version
     rejects(() => t.act((t.room().round.current + 1) % 4, { type: 'pass' }), /Not your turn/)
     assert.equal(t.room().version, before, 'a rejected move changes nothing')
+  })
+})
+
+describe('the face-down trump card', () => {
+  it('leaves the claimer holding five playable cards', () => {
+    const t = toPlayingPhase(dealtTable(4))
+    const r = t.room()
+    const claimer = r.round.claimer!
+
+    assert.equal(r.round.hands[claimer].length, 5, 'one card is set aside')
+    assert.ok(r.round.trumpCard, 'and it is held face down')
+    assert.equal(r.round.trumpCard!.suit, r.round.trumpSuit, 'its suit is trump')
+    assert.ok(
+      !r.round.hands[claimer].some((c) => c.id === r.round.trumpCard!.id),
+      'it is genuinely out of the hand, not just marked',
+    )
+  })
+
+  it('shows the face-down card to the claimer alone', () => {
+    const t = toPlayingPhase(dealtTable(4))
+    const claimer = t.room().round.claimer!
+    const trumpId = t.room().round.trumpCard!.id
+
+    assert.equal(t.view(claimer).yourTrumpCard?.id, trumpId, 'the claimer knows their own card')
+    for (let seat = 0; seat < 4; seat++) {
+      const v = t.view(seat)
+      assert.equal(v.trumpFaceDown, true, 'everyone can see that a card is face down')
+      if (seat === claimer) continue
+      assert.equal(v.yourTrumpCard, null, `seat ${seat} must not learn the card`)
+      assert.ok(!JSON.stringify(v).includes(trumpId), `seat ${seat} must not see it anywhere`)
+    }
+  })
+
+  it('will not let the claimer play it while it is face down', () => {
+    const t = toPlayingPhase(dealtTable(4))
+    const r = t.room()
+    const claimer = r.round.claimer!
+    const trumpId = r.round.trumpCard!.id
+    r.round.current = claimer
+
+    assert.ok(!t.view(claimer).playableIds.includes(trumpId), 'not offered')
+    rejects(() => t.act(claimer, { type: 'playCard', cardId: trumpId }), /do not hold/)
+  })
+
+  it('makes the claimer void in that suit, so they may play anything', () => {
+    const t = toPlayingPhase(dealtTable(4), 520, 'Hearts')
+    const r = t.room()
+    const claimer = r.round.claimer!
+    const leader = (claimer - 1 + 4) % 4
+
+    // The claimer's only heart is the one lying face down.
+    rig(t, { [leader]: ['Hearts-2'], [claimer]: ['Spades-3', 'Clubs-9'] }, leader)
+    r.round.trumpCard = buildDeck(4).find((c) => c.id === 'Hearts-A')!
+    r.round.trumpSuit = 'Hearts'
+
+    t.act(leader, { type: 'playCard', cardId: 'Hearts-2' })
+
+    const v = t.view(claimer)
+    assert.equal(v.playableIds.length, 2, 'both cards legal — they count as void')
+    assert.equal(v.canAskTrump, true, 'and they may ask for their own trump')
+  })
+
+  it('hands the card back when trump is asked for', () => {
+    const t = toPlayingPhase(dealtTable(4), 520, 'Hearts')
+    const r = t.room()
+    const claimer = r.round.claimer!
+    const asker = (claimer + 1) % 4
+    const leader = (claimer - 1 + 4) % 4
+
+    rig(t, { [leader]: ['Spades-2'], [asker]: ['Clubs-9', 'Diamonds-3'] }, leader)
+    r.round.trumpCard = buildDeck(4).find((c) => c.id === 'Hearts-A')!
+    r.round.trumpSuit = 'Hearts'
+    const handBefore = r.round.hands[claimer].length
+
+    t.act(leader, { type: 'playCard', cardId: 'Spades-2' })
+    // Seats between the leader and the asker pass through; put the asker on turn.
+    r.round.current = asker
+    assert.equal(t.view(asker).canAskTrump, true, 'void in spades, so the ask is offered')
+    t.act(asker, { type: 'askTrump' })
+
+    const after = t.room()
+    assert.equal(after.round.trumpRevealed, true)
+    assert.equal(after.round.trumpCard, null, 'no longer face down')
+    assert.equal(after.round.hands[claimer].length, handBefore + 1, 'back in the claimer’s hand')
+    assert.ok(
+      after.round.hands[claimer].some((c) => c.id === 'Hearts-A'),
+      'and it is the card that was set aside',
+    )
+  })
+
+  it('comes back for the last trick when nobody ever asks', () => {
+    const t = toPlayingPhase(dealtTable(4))
+    const claimer = t.room().round.claimer!
+    const trumpId = t.room().round.trumpCard!.id
+
+    const done = playOutRound(t) // playOutRound never asks for trump
+
+    assert.equal(done.round.trumpRevealed, false, 'trump never went live')
+    assert.equal(done.round.trumpCard, null, 'the card was returned and played')
+    assert.equal(done.round.hands[claimer].length, 0, 'the claimer played all six')
+    assert.equal(done.round.trickNumber, 6)
+    const everyCardPlayed = [
+      ...(done.round.lastTrick?.plays ?? []).map((p) => p.card.id),
+    ]
+    assert.ok(everyCardPlayed.includes(trumpId), 'the trump card was the last card played')
+  })
+
+  it('refuses a double while the trump is still face down', () => {
+    const t = toPlayingPhase(dealtTable(4))
+    const r = t.room()
+    const claimer = r.round.claimer!
+    r.round.current = claimer
+    r.round.hands[claimer] = r.round.hands[claimer].slice(0, 1)
+
+    assert.equal(t.view(claimer).canCallDouble, false, 'not their real last card')
+    rejects(
+      () => t.act(claimer, { type: 'playCard', cardId: r.round.hands[claimer][0].id, double: true }),
+      /last card/,
+    )
   })
 })

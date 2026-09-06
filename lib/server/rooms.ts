@@ -13,7 +13,7 @@ import {
   shuffle,
   sortHand,
   type Suit,
-  SUITS,
+
   teamOf,
   type TrickPlay,
   trickPoints,
@@ -73,6 +73,13 @@ export interface Room {
     claimer: number | null
     claim: number
     trumpSuit: Suit | null
+    /**
+     * The claimer's face-down trump card, held out of their hand. While it sits
+     * here it is unplayable and does not count for following suit. It returns to
+     * the hand when trump is revealed, or when it is the only card they have
+     * left — in which case it is played without trump ever going live.
+     */
+    trumpCard: Card | null
     trumpRevealed: boolean
     doubleCalled: boolean
     trick: TrickPlay[]
@@ -124,6 +131,7 @@ function emptyRound(seatCount: number): Room['round'] {
     claimer: null,
     claim: 0,
     trumpSuit: null,
+    trumpCard: null,
     trumpRevealed: false,
     doubleCalled: false,
     trick: [],
@@ -227,7 +235,7 @@ export type Action =
   | { type: 'start' }
   | { type: 'bid'; amount: number }
   | { type: 'pass' }
-  | { type: 'selectTrump'; suit: Suit }
+  | { type: 'selectTrump'; cardId: string }
   | { type: 'askTrump' }
   | { type: 'playCard'; cardId: string; double?: boolean }
   | { type: 'nextRound' }
@@ -248,7 +256,7 @@ export function applyAction(id: string, playerId: string, secret: string, action
       doPass(room, player)
       break
     case 'selectTrump':
-      doSelectTrump(room, player, action.suit)
+      doSelectTrump(room, player, action.cardId)
       break
     case 'askTrump':
       doAskTrump(room, player)
@@ -330,17 +338,36 @@ function doPass(room: Room, player: RoomPlayer) {
   advanceBidding(room)
 }
 
-function doSelectTrump(room: Room, player: RoomPlayer, suit: Suit) {
+/**
+ * The claimer sets one card aside, face down. Its suit becomes trump, but
+ * nobody — including the claimer — can play that card until trump is revealed.
+ */
+function doSelectTrump(room: Room, player: RoomPlayer, cardId: string) {
   if (room.status !== 'trump') throw new ActionError('Not choosing trump')
   if (room.round.claimer !== player.seat) throw new ActionError('Only the claimer picks trump')
-  if (!SUITS.includes(suit)) throw new ActionError('Unknown suit')
 
   const r = room.round
-  r.trumpSuit = suit
+  const hand = r.hands[player.seat]
+  const card = hand.find((c) => c.id === cardId)
+  if (!card) throw new ActionError('You do not hold that card')
+
+  // Out of the hand entirely: this is what makes it unplayable and makes the
+  // claimer count as void in its suit.
+  r.hands[player.seat] = hand.filter((c) => c.id !== cardId)
+  r.trumpCard = card
+  r.trumpSuit = card.suit
   r.trumpRevealed = false
-  // The claimer leads the first trick.
-  r.current = player.seat
+  // The player to the claimer's right leads the first trick.
+  r.current = (player.seat - 1 + room.seatCount) % room.seatCount
   room.status = 'playing'
+}
+
+/** Put the face-down card back in the claimer's hand. */
+function returnTrumpCard(room: Room) {
+  const r = room.round
+  if (!r.trumpCard || r.claimer === null) return
+  r.hands[r.claimer] = sortHand([...r.hands[r.claimer], r.trumpCard])
+  r.trumpCard = null
 }
 
 function doAskTrump(room: Room, player: RoomPlayer) {
@@ -350,7 +377,10 @@ function doAskTrump(room: Room, player: RoomPlayer) {
   if (r.trumpRevealed) throw new ActionError('Trump is already revealed')
   const playable = getPlayable(r.hands[player.seat], r.trick, r.trumpRevealed)
   if (!playable.canAskTrump) throw new ActionError('You can only ask when void in the led suit')
+
   r.trumpRevealed = true
+  // Revealing hands the card back to the claimer, who may now play it.
+  returnTrumpCard(room)
 }
 
 function doPlayCard(room: Room, player: RoomPlayer, cardId: string, double: boolean) {
@@ -367,12 +397,22 @@ function doPlayCard(room: Room, player: RoomPlayer, cardId: string, double: bool
 
   if (double) {
     if (r.claimer !== player.seat) throw new ActionError('Only the claimer can call double')
-    if (hand.length !== 1) throw new ActionError('Double is called on your last card')
+    // With the trump still face down this is not really their last card — it
+    // comes back to hand the moment the rest of the hand runs out.
+    if (hand.length !== 1 || r.trumpCard) throw new ActionError('Double is called on your last card')
     if (r.doubleCalled) throw new ActionError('Double already called')
     r.doubleCalled = true
   }
 
   r.hands[player.seat] = hand.filter((c) => c.id !== cardId)
+
+  // If the claimer has emptied their hand and nobody ever asked, the face-down
+  // card comes back so they can play it for the last trick. Trump stays
+  // unrevealed, so it wins only as an ordinary card of its suit.
+  if (player.seat === r.claimer && r.hands[player.seat].length === 0 && r.trumpCard) {
+    returnTrumpCard(room)
+  }
+
   r.trick.push({ player: player.seat, card })
   r.lastTrick = null
 
@@ -465,6 +505,10 @@ export interface PlayerView {
     settlement: Settlement | null
   }
   yourHand: Card[]
+  /** The claimer's own face-down trump card. Null for everyone else. */
+  yourTrumpCard: Card | null
+  /** True while a face-down trump card is sitting out of the claimer's hand. */
+  trumpFaceDown: boolean
   playableIds: string[]
   canAskTrump: boolean
   canCallDouble: boolean
@@ -526,9 +570,13 @@ export function viewFor(room: Room, playerId: string): PlayerView {
       settlement: r.settlement,
     },
     yourHand: myHand,
+    // Only the claimer ever learns which card is face down.
+    yourTrumpCard: r.claimer === me.seat ? r.trumpCard : null,
+    trumpFaceDown: r.trumpCard !== null,
     playableIds: playable ? Array.from(playable.playableIds) : [],
     canAskTrump: playable?.canAskTrump === true,
-    canCallDouble: inPlay && r.claimer === me.seat && myHand.length === 1 && !r.doubleCalled,
+    canCallDouble:
+      inPlay && r.claimer === me.seat && myHand.length === 1 && !r.trumpCard && !r.doubleCalled,
     minBid: minAllowed(room),
     mustClaim: room.status === 'bidding' && r.current === me.seat && mustClaim(room),
   }

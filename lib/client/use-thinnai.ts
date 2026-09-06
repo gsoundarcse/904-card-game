@@ -64,7 +64,7 @@ export function useThinnai(roomId: string, creds: Credentials | null) {
             // Unchanged.
           } else if (res.ok) {
             const data = await res.json()
-            if (data?.view) {
+            if (data?.view && data.view.version > versionRef.current) {
               versionRef.current = data.view.version
               setView(data.view)
             }
@@ -96,7 +96,7 @@ export function useThinnai(roomId: string, creds: Credentials | null) {
         const data = await res.json()
         if (!res.ok) {
           setError(data?.error ?? 'That move was rejected')
-        } else if (data?.view) {
+        } else if (data?.view && data.view.version >= versionRef.current) {
           versionRef.current = data.view.version
           setView(data.view)
         }

@@ -46,10 +46,22 @@ The highest bid at the end of the lap becomes the claim, and that player is the
 
 ## Trump
 
-The claimer picks a suit and nobody else sees it. Online, each player has their
-own screen, so the claimer simply views their hand and chooses.
+The claimer lays **one card from their hand face down**. Its suit is trump.
+Nobody else sees the card or the suit.
 
-The claimer leads the first trick.
+That card is genuinely out of their hand, which has three consequences:
+
+- The claimer plays the round with **five cards**, not six, until it comes back.
+- They **cannot play it** while it is face down.
+- It **does not count for following suit**. If the face-down card is their only
+  spade and spades are led, the claimer is void and may play anything.
+
+The card returns to their hand the moment trump is revealed. If nobody ever asks,
+it comes back for the sixth trick and is played as an ordinary card of its suit —
+trump never goes live, and it never wins as trump.
+
+The player to the claimer's right leads the first trick, so the claimer plays
+second. The winner of each trick leads the next.
 
 ## Play
 
@@ -58,14 +70,19 @@ Follow the led suit if you can. That is the only hard constraint.
 If you are **void** in the led suit you may play absolutely anything — a trump,
 or a plain discard. Nothing is forced.
 
-**Asking for trump is optional.** A void player may ask, which reveals the suit
-to everyone for the rest of the round. Asking does not oblige you to then play a
-trump. The cost of asking is the information you hand your opponents.
+**Asking for trump is optional.** A void player may ask, which turns the
+face-down card over, hands it back to the claimer, and makes trump live for the
+rest of the round. Asking does not oblige you to then play a trump. The cost of
+asking is the information you hand your opponents — and that you have just given
+the claimer their sixth card back.
+
+The claimer may ask too, on the same terms: only when they are void. That is
+their route to getting the card back early.
 
 Until trump is revealed it does not win tricks — the highest card of the led suit
 takes them. Once revealed, any trump beats any non-trump.
 
-Turn order is strictly the seat to your left and never changes. The winner of a
+Turn order within a trick is strictly the seat to your left. The winner of a
 trick leads the next one.
 
 ## Double

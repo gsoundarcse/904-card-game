@@ -24,7 +24,8 @@ import {
 import { ConfigMenu } from '@/components/config-menu'
 import { Scoreboard } from '@/components/scoreboard'
 import { GameTable, type SeatView } from '@/components/game-table'
-import { CardFace, ClickableCard } from '@/components/playing-card'
+import { CardBack, CardFace, ClickableCard } from '@/components/playing-card'
+import { StrongSupport } from '@/components/strong-support'
 
 type Phase = 'config' | 'bidding' | 'trump' | 'playing' | 'roundOver'
 
@@ -60,11 +61,14 @@ export function CardGame() {
   const [claimer, setClaimer] = useState<number | null>(null)
   const [claim, setClaim] = useState(0)
   const [trumpSuit, setTrumpSuit] = useState<Suit | null>(null)
+  // The claimer's face-down card. Out of their hand, unplayable until revealed.
+  const [trumpCard, setTrumpCard] = useState<Card | null>(null)
   const [trumpRevealed, setTrumpRevealed] = useState(false)
   const [trumpHidden, setTrumpHidden] = useState(false) // claimer temporarily peeking
 
   // play
   const [trick, setTrick] = useState<TrickPlay[]>([])
+  const [lastTrick, setLastTrick] = useState<TrickPlay[]>([])
   const [trickNumber, setTrickNumber] = useState(0)
   const [teamScores, setTeamScores] = useState<[number, number]>([0, 0])
   const [banner, setBanner] = useState<string | null>(null)
@@ -98,9 +102,11 @@ export function CardGame() {
     setClaimer(null)
     setClaim(0)
     setTrumpSuit(null)
+    setTrumpCard(null)
     setTrumpRevealed(false)
     setTrumpHidden(false)
     setTrick([])
+    setLastTrick([])
     setTrickNumber(0)
     setTeamScores([0, 0])
     setBanner(null)
@@ -174,19 +180,41 @@ export function CardGame() {
     [phase, current, passed, bids, advanceBidding],
   )
 
-  const handleSelectTrump = useCallback((suit: Suit) => {
-    setTrumpSuit(suit)
-    setTrumpHidden(false)
-    setTrumpRevealed(false)
-    setTrick([])
-    setTrickNumber(0)
-    setPhase('playing')
-  }, [])
+  const handleSelectTrump = useCallback(
+    (cardId: string) => {
+      if (claimer === null) return
+      const card = players[claimer]?.hand.find((c) => c.id === cardId)
+      if (!card) return
+      // Out of the hand entirely — that is what makes it unplayable and makes
+      // the claimer count as void in its suit.
+      setPlayers((prev) =>
+        prev.map((p, i) => (i === claimer ? { ...p, hand: p.hand.filter((c) => c.id !== cardId) } : p)),
+      )
+      setTrumpCard(card)
+      setTrumpSuit(card.suit)
+      setTrumpHidden(false)
+      setTrumpRevealed(false)
+      setTrick([])
+      setLastTrick([])
+      setTrickNumber(0)
+      setPhase('playing')
+    },
+    [claimer, players],
+  )
 
-  // When entering play, set the leader = player to the left of the claimer.
+  /** Put the face-down card back in the claimer's hand. */
+  const returnTrumpCard = useCallback(() => {
+    if (claimer === null || !trumpCard) return
+    setPlayers((prev) =>
+      prev.map((p, i) => (i === claimer ? { ...p, hand: sortHand([...p.hand, trumpCard]) } : p)),
+    )
+    setTrumpCard(null)
+  }, [claimer, trumpCard])
+
+  // When entering play, set the leader = player to the right of the claimer.
   useEffect(() => {
     if (phase === 'playing' && claimer !== null && trickNumber === 0 && trick.length === 0) {
-      setCurrent((claimer + 1) % n)
+      setCurrent((claimer - 1 + n) % n)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
@@ -202,8 +230,9 @@ export function CardGame() {
     if (phase !== 'playing' || resolving || trumpRevealed) return
     if (!playable?.canAskTrump) return
     setTrumpRevealed(true)
+    returnTrumpCard()
     setTempBanner('Trump Suit Revealed!')
-  }, [phase, resolving, trumpRevealed, playable, setTempBanner])
+  }, [phase, resolving, trumpRevealed, playable, returnTrumpCard, setTempBanner])
 
   const resolveTrick = useCallback(
     (finalTrick: TrickPlay[]) => {
@@ -215,6 +244,7 @@ export function CardGame() {
         return next
       })
       const completed = trickNumber + 1
+      setLastTrick(finalTrick)
       setTrickNumber(completed)
       setTempBanner(`${players[winner].name} takes the trick +${pts}`, 1600)
       setTrick([])
@@ -233,9 +263,13 @@ export function CardGame() {
       const card = hand.find((c) => c.id === cardId)
       if (!card) return
 
+      const emptiedHand = hand.length === 1
       setPlayers((prev) =>
         prev.map((p, i) => (i === current ? { ...p, hand: p.hand.filter((c) => c.id !== cardId) } : p)),
       )
+      // Nobody asked, so the face-down card comes back for the last trick. Trump
+      // stays unrevealed: it wins only as an ordinary card of its suit.
+      if (current === claimer && emptiedHand && trumpCard) returnTrumpCard()
       const newTrick = [...trick, { player: current, card }]
       setTrick(newTrick)
 
@@ -246,7 +280,7 @@ export function CardGame() {
         setCurrent((current + 1) % n)
       }
     },
-    [phase, resolving, playable, players, current, trick, n, resolveTrick],
+    [phase, resolving, playable, players, current, trick, n, resolveTrick, claimer, trumpCard, returnTrumpCard],
   )
 
   useEffect(() => () => { if (bannerTimer.current) clearTimeout(bannerTimer.current) }, [])
@@ -306,7 +340,14 @@ export function CardGame() {
         onReset={resetToConfig}
       />
 
-      <GameTable seats={seats} trick={trick} trumpSuit={trumpSuit} trumpRevealed={trumpRevealed} banner={banner} />
+      <GameTable
+        seats={seats}
+        trick={trick.length > 0 ? trick : lastTrick}
+        trumpSuit={trumpSuit}
+        trumpRevealed={trumpRevealed}
+        trumpPlaced={trumpCard !== null || trumpRevealed}
+        banner={banner}
+      />
 
       {/* Active player control tray */}
       <section className="rounded-2xl border border-border bg-secondary/50 p-4">
@@ -328,6 +369,10 @@ export function CardGame() {
                 Ask for trump
               </button>
             )}
+            <StrongSupport
+              revealed={trumpRevealed}
+              eligible={claimer !== null && current !== claimer && teamOf(current) === teamOf(claimer)}
+            />
             {playable && <PlayHint reason={playable.reason} trumpRevealed={trumpRevealed} />}
           </div>
         </div>
@@ -354,6 +399,21 @@ export function CardGame() {
             )
           ) : (
             <span className="font-serif italic text-muted-foreground">No cards left</span>
+          )}
+
+          {trumpCard && current === claimer && (
+            <div className="ml-4 flex shrink-0 flex-col items-center gap-1 border-l border-border pl-4">
+              <div className="relative">
+                <CardBack size="lg" className="opacity-70" />
+                <span className="absolute inset-0 flex items-center justify-center font-mono text-[9px] uppercase tracking-widest text-gold">
+                  face down
+                </span>
+              </div>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {trumpCard.rank}
+                {SUIT_SYMBOL[trumpCard.suit]} · locked
+              </span>
+            </div>
           )}
         </div>
 
@@ -468,16 +528,19 @@ function TrumpModal({
   hand: Card[]
   hidden: boolean
   onPeek: () => void
-  onSelect: (suit: Suit) => void
+  onSelect: (cardId: string) => void
 }) {
+  const [picked, setPicked] = useState<string | null>(null)
+  const chosen = hand.find((c) => c.id === picked) ?? null
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <div className="max-h-[92svh] w-full max-w-lg overflow-y-auto rounded-2xl border-2 border-gold/50 bg-popover p-6 text-center shadow-2xl">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">Secure Prompt</p>
-        <h2 className="mt-2 font-serif text-3xl font-bold text-gold-soft">{claimerName} is the Claimer</h2>
+        <h2 className="mt-2 font-serif text-3xl font-bold text-gold-soft">{claimerName} sets the trump</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Target goal <span className="font-semibold text-gold">{claim}</span>. Choose a hidden trump suit — the others
-          will only see a mystery card.
+          Target <span className="font-semibold text-gold">{claim}</span>. Lay one card face down — its suit is trump,
+          and you cannot play that card until trump is asked for.
         </p>
 
         {!hidden ? (
@@ -490,44 +553,54 @@ function TrumpModal({
           </button>
         ) : (
           <>
-            {/* Full hand stays visible so the trump choice is an informed one. */}
             <div className="mt-5 rounded-xl border border-border bg-background/40 p-3">
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Your hand</p>
+              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Tap a card to lay it face down
+              </p>
               <div className="flex items-end justify-center overflow-x-auto pb-1 pl-3">
                 {hand.map((card) => (
-                  <div key={card.id} className="-ml-3 shrink-0 first:ml-0">
-                    <CardFace card={card} size="md" />
-                  </div>
+                  <ClickableCard
+                    key={card.id}
+                    card={card}
+                    selected={picked === card.id}
+                    onClick={() => setPicked(card.id)}
+                  />
                 ))}
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-4 gap-2">
               {SUITS.map((suit) => {
-                const red = suit === 'Hearts' || suit === 'Diamonds'
                 const held = hand.filter((c) => c.suit === suit)
                 const points = held.reduce((sum, c) => sum + c.points, 0)
+                const red = suit === 'Hearts' || suit === 'Diamonds'
                 return (
-                  <button
+                  <div
                     key={suit}
-                    type="button"
-                    onClick={() => onSelect(suit)}
                     className={cn(
-                      'flex flex-col items-center justify-center gap-1 rounded-xl border border-border bg-card py-4 font-bold text-card-foreground transition-all hover:-translate-y-0.5 hover:border-gold hover:ring-2 hover:ring-gold',
-                      red && 'text-suit-red',
+                      'rounded-lg border border-border bg-card/60 py-2',
+                      chosen?.suit === suit && 'border-gold ring-1 ring-gold',
                     )}
                   >
-                    <span className="flex items-center gap-2 text-2xl">
-                      <span>{SUIT_SYMBOL[suit]}</span>
-                      <span className="text-base">{suit}</span>
-                    </span>
-                    <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                      {held.length} held · {points} pts
-                    </span>
-                  </button>
+                    <div className={cn('text-lg', red && 'text-suit-red')}>{SUIT_SYMBOL[suit]}</div>
+                    <div className="font-mono text-[10px] text-muted-foreground">
+                      {held.length} · {points}p
+                    </div>
+                  </div>
                 )
               })}
             </div>
+
+            <button
+              type="button"
+              onClick={() => chosen && onSelect(chosen.id)}
+              disabled={!chosen}
+              className="mt-5 w-full rounded-xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40"
+            >
+              {chosen
+                ? `Lay ${chosen.rank}${SUIT_SYMBOL[chosen.suit]} face down — ${chosen.suit} is trump`
+                : 'Pick a card first'}
+            </button>
           </>
         )}
       </div>

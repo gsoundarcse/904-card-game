@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { SUIT_SYMBOL, type Suit, TEAM_NAME } from '@/lib/game'
+import { MysteryCard } from '@/components/playing-card'
 
 export function Scoreboard({
   teamScores,
@@ -22,6 +23,8 @@ export function Scoreboard({
   phaseLabel: string
   onReset: () => void
 }) {
+  const trumpCard = trumpSuit ? { id: 'revealed-trump', suit: trumpSuit, rank: 'A' as const, points: 0 } : null
+
   return (
     <div className="flex flex-wrap items-stretch justify-between gap-3">
       <div className="flex items-center gap-3">
@@ -63,8 +66,11 @@ export function Scoreboard({
             {!trumpSuit ? (
               '—'
             ) : trumpRevealed ? (
-              <span className={cn('inline-flex items-center gap-1', (trumpSuit === 'Hearts' || trumpSuit === 'Diamonds') && 'text-suit-red')}>
-                {SUIT_SYMBOL[trumpSuit]} {trumpSuit}
+              <span className="inline-flex items-center gap-1">
+                <MysteryCard size="sm" revealed card={trumpCard} />
+                <span className={cn((trumpSuit === 'Hearts' || trumpSuit === 'Diamonds') && 'text-suit-red')}>
+                  {SUIT_SYMBOL[trumpSuit]} {trumpSuit}
+                </span>
               </span>
             ) : (
               <span className="text-gold">Hidden ?</span>

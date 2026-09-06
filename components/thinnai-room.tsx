@@ -6,7 +6,8 @@ import { CLAIM_STEP, MAX_CLAIM, SUIT_SYMBOL, SUITS, type Suit, teamLabel, teamOf
 import type { Action, PlayerView } from '@/lib/server/rooms'
 import { type Credentials, useThinnai } from '@/lib/client/use-thinnai'
 import { GameTable, type SeatView } from '@/components/game-table'
-import { CardFace, ClickableCard } from '@/components/playing-card'
+import { CardBack, CardFace, ClickableCard } from '@/components/playing-card'
+import { StrongSupport } from '@/components/strong-support'
 
 export function ThinnaiRoom({ roomId, creds }: { roomId: string; creds: Credentials }) {
   const { view, error, pending, send, clearError } = useThinnai(roomId, creds)
@@ -244,6 +245,7 @@ function Table({
         trick={trickToShow}
         trumpSuit={r.trumpSuit}
         trumpRevealed={r.trumpRevealed}
+        trumpPlaced={view.trumpFaceDown || r.trumpRevealed}
         banner={banner}
       />
 
@@ -275,6 +277,21 @@ function Table({
             )
           ) : (
             <span className="font-serif italic text-muted-foreground">No cards left</span>
+          )}
+
+          {view.yourTrumpCard && (
+            <div className="ml-4 flex shrink-0 flex-col items-center gap-1 border-l border-border pl-4">
+              <div className="relative">
+                <CardBack size="lg" className="opacity-70" />
+                <span className="absolute inset-0 flex items-center justify-center font-mono text-[9px] uppercase tracking-widest text-gold">
+                  face down
+                </span>
+              </div>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {view.yourTrumpCard.rank}
+                {SUIT_SYMBOL[view.yourTrumpCard.suit]} · locked
+              </span>
+            </div>
           )}
         </div>
 
@@ -395,6 +412,14 @@ function PlayControls({
           Ask for trump
         </button>
       )}
+      <StrongSupport
+        revealed={view.round.trumpRevealed}
+        eligible={
+          view.round.claimer !== null &&
+          view.yourSeat !== view.round.claimer &&
+          teamOf(view.yourSeat) === teamOf(view.round.claimer)
+        }
+      />
 
       {view.canCallDouble && lastCard && (
         <div className="flex flex-col items-center gap-1">
@@ -438,15 +463,18 @@ function PlayControls({
 
 function TrumpPicker({ view, send }: { view: PlayerView; send: (a: Action) => void }) {
   const [open, setOpen] = useState(false)
+  const [picked, setPicked] = useState<string | null>(null)
+
+  const chosen = view.yourHand.find((c) => c.id === picked) ?? null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <div className="max-h-[92svh] w-full max-w-lg overflow-y-auto rounded-2xl border-2 border-gold/50 bg-popover p-6 text-center shadow-2xl">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">You won the claim</p>
-        <h2 className="mt-2 font-serif text-3xl font-bold text-gold-soft">Choose your trump</h2>
+        <h2 className="mt-2 font-serif text-3xl font-bold text-gold-soft">Set your trump card</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Target <span className="font-semibold text-gold">{view.round.claim}</span>. Nobody else sees this until trump is
-          asked for.
+          Target <span className="font-semibold text-gold">{view.round.claim}</span>. Choose one card to lay face down.
+          Its suit becomes trump — and you cannot play that card until trump is asked for.
         </p>
 
         {!open ? (
@@ -460,42 +488,53 @@ function TrumpPicker({ view, send }: { view: PlayerView; send: (a: Action) => vo
         ) : (
           <>
             <div className="mt-5 rounded-xl border border-border bg-background/40 p-3">
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Your hand</p>
+              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Tap a card to lay it face down
+              </p>
               <div className="flex items-end justify-center overflow-x-auto pb-1 pl-3">
                 {view.yourHand.map((card) => (
-                  <div key={card.id} className="-ml-3 shrink-0 first:ml-0">
-                    <CardFace card={card} size="md" />
-                  </div>
+                  <ClickableCard
+                    key={card.id}
+                    card={card}
+                    selected={picked === card.id}
+                    onClick={() => setPicked(card.id)}
+                  />
                 ))}
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-4 gap-2">
               {SUITS.map((suit) => {
                 const held = view.yourHand.filter((c) => c.suit === suit)
                 const points = held.reduce((sum, c) => sum + c.points, 0)
                 const red = suit === 'Hearts' || suit === 'Diamonds'
                 return (
-                  <button
+                  <div
                     key={suit}
-                    type="button"
-                    onClick={() => send({ type: 'selectTrump', suit })}
                     className={cn(
-                      'flex flex-col items-center justify-center gap-1 rounded-xl border border-border bg-card py-4 font-bold text-card-foreground transition-all hover:-translate-y-0.5 hover:border-gold hover:ring-2 hover:ring-gold',
-                      red && 'text-suit-red',
+                      'rounded-lg border border-border bg-card/60 py-2',
+                      chosen?.suit === suit && 'border-gold ring-1 ring-gold',
                     )}
                   >
-                    <span className="flex items-center gap-2 text-2xl">
-                      <span>{SUIT_SYMBOL[suit as Suit]}</span>
-                      <span className="text-base">{suit}</span>
-                    </span>
-                    <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                      {held.length} held · {points} pts
-                    </span>
-                  </button>
+                    <div className={cn('text-lg', red && 'text-suit-red')}>{SUIT_SYMBOL[suit as Suit]}</div>
+                    <div className="font-mono text-[10px] text-muted-foreground">
+                      {held.length} · {points}p
+                    </div>
+                  </div>
                 )
               })}
             </div>
+
+            <button
+              type="button"
+              onClick={() => chosen && send({ type: 'selectTrump', cardId: chosen.id })}
+              disabled={!chosen}
+              className="mt-5 w-full rounded-xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40"
+            >
+              {chosen
+                ? `Lay ${chosen.rank}${SUIT_SYMBOL[chosen.suit]} face down — ${chosen.suit} is trump`
+                : 'Pick a card first'}
+            </button>
           </>
         )}
       </div>

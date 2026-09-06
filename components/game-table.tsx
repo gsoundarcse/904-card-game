@@ -84,15 +84,23 @@ export function GameTable({
   trick,
   trumpSuit,
   trumpRevealed,
+  trumpPlaced,
   banner,
 }: {
   seats: SeatView[]
   trick: TrickPlay[]
   trumpSuit: Suit | null
   trumpRevealed: boolean
+  /**
+   * True once a trump card is lying face down. Online, other players are not
+   * told the suit, so `trumpSuit` is null for them — without this the indicator
+   * would vanish for everyone but the claimer.
+   */
+  trumpPlaced?: boolean
   banner: string | null
 }) {
   const trumpCard: Card | null = trumpSuit ? { id: 'trump', suit: trumpSuit, rank: 'A', points: 0 } : null
+  const showTrump = trumpPlaced ?? trumpSuit !== null
 
   return (
     <div className="relative mx-auto h-[440px] w-full max-w-3xl sm:h-[560px]">
@@ -102,10 +110,13 @@ export function GameTable({
       </div>
 
       {/* trump indicator */}
-      {trumpSuit && (
+      {showTrump && (
         <div className="absolute left-1/2 top-[14%] flex -translate-x-1/2 flex-col items-center gap-1">
           <span className="font-mono text-[10px] uppercase tracking-widest text-gold">Trump</span>
           <MysteryCard size="sm" revealed={trumpRevealed} card={trumpRevealed ? trumpCard : null} />
+          {!trumpRevealed && (
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">face down</span>
+          )}
         </div>
       )}
 
@@ -119,7 +130,9 @@ export function GameTable({
           trick.map((play) => (
             <div key={play.card.id} className="flex flex-col items-center gap-1">
               <CardFace card={play.card} size="md" />
-              <span className="max-w-16 truncate font-mono text-[9px] text-foreground/70">{seats[play.player].name}</span>
+              <span className="max-w-24 truncate font-mono text-[10px] font-semibold text-foreground/80">
+                {seats[play.player].name}
+              </span>
             </div>
           ))
         )}

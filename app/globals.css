@@ -90,3 +90,21 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes ribbon-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-10vh) rotate(0deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(115vh) rotate(540deg);
+  }
+}
+
+.animate-ribbon {
+  animation: ribbon-fall 1.7s ease-in forwards;
+}
