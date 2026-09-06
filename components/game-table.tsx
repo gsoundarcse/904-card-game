@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { type Card, type Suit, type TrickPlay } from '@/lib/game'
 import { CardBack, CardFace, MysteryCard } from '@/components/playing-card'
@@ -83,6 +84,7 @@ export function GameTable({
   seats,
   trick,
   trumpSuit,
+  trumpCard,
   trumpRevealed,
   trumpPlaced,
   banner,
@@ -90,6 +92,7 @@ export function GameTable({
   seats: SeatView[]
   trick: TrickPlay[]
   trumpSuit: Suit | null
+  trumpCard?: Card | null
   trumpRevealed: boolean
   /**
    * True once a trump card is lying face down. Online, other players are not
@@ -99,8 +102,14 @@ export function GameTable({
   trumpPlaced?: boolean
   banner: string | null
 }) {
-  const trumpCard: Card | null = trumpSuit ? { id: 'trump', suit: trumpSuit, rank: 'A', points: 0 } : null
+  const [trumpDismissed, setTrumpDismissed] = useState(false)
+  const displayTrumpCard: Card | null = trumpCard ?? (trumpSuit ? { id: 'trump', suit: trumpSuit, rank: 'A', points: 0 } : null)
   const showTrump = trumpPlaced ?? trumpSuit !== null
+  const showTrumpIndicator = showTrump && (!trumpRevealed || !trumpDismissed)
+
+  useEffect(() => {
+    if (!trumpRevealed) setTrumpDismissed(false)
+  }, [trumpRevealed])
 
   return (
     <div className="relative mx-auto h-[440px] w-full max-w-3xl sm:h-[560px]">
@@ -110,10 +119,23 @@ export function GameTable({
       </div>
 
       {/* trump indicator */}
-      {showTrump && (
+      {showTrumpIndicator && (
         <div className="absolute left-1/2 top-[14%] flex -translate-x-1/2 flex-col items-center gap-1">
           <span className="font-mono text-[10px] uppercase tracking-widest text-gold">Trump</span>
-          <MysteryCard size="sm" revealed={trumpRevealed} card={trumpRevealed ? trumpCard : null} />
+          <div className="relative">
+            <MysteryCard size="sm" revealed={trumpRevealed} card={trumpRevealed ? displayTrumpCard : null} />
+            {trumpRevealed && (
+              <button
+                type="button"
+                onClick={() => setTrumpDismissed(true)}
+                className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-gold/70 bg-felt-dark text-xs text-gold hover:bg-felt"
+                aria-label="Hide revealed trump card"
+                title="Hide revealed trump card"
+              >
+                ×
+              </button>
+            )}
+          </div>
           {!trumpRevealed && (
             <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">face down</span>
           )}

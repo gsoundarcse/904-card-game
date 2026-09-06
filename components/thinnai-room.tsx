@@ -300,6 +300,18 @@ function Table({
         {view.status === 'playing' && yourTurn && (
           <PlayControls view={view} send={send} pending={pending} playable={playable} />
         )}
+        {view.status === 'playing' && (
+          <div className="mt-3 flex justify-center">
+            <StrongSupport
+              revealed={r.trumpRevealed}
+              eligible={
+                r.claimer !== null &&
+                view.yourSeat !== r.claimer &&
+                teamOf(view.yourSeat) === teamOf(r.claimer)
+              }
+            />
+          </div>
+        )}
       </section>
 
       {view.status === 'trump' && r.claimer === view.yourSeat && <TrumpPicker view={view} send={send} />}
@@ -412,15 +424,6 @@ function PlayControls({
           Ask for trump
         </button>
       )}
-      <StrongSupport
-        revealed={view.round.trumpRevealed}
-        eligible={
-          view.round.claimer !== null &&
-          view.yourSeat !== view.round.claimer &&
-          teamOf(view.yourSeat) === teamOf(view.round.claimer)
-        }
-      />
-
       {view.canCallDouble && lastCard && (
         <div className="flex flex-col items-center gap-1">
           <button

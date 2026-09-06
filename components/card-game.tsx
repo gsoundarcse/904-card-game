@@ -344,6 +344,7 @@ export function CardGame() {
         seats={seats}
         trick={trick.length > 0 ? trick : lastTrick}
         trumpSuit={trumpSuit}
+        trumpCard={trumpCard}
         trumpRevealed={trumpRevealed}
         trumpPlaced={trumpCard !== null || trumpRevealed}
         banner={banner}
@@ -371,7 +372,7 @@ export function CardGame() {
             )}
             <StrongSupport
               revealed={trumpRevealed}
-              eligible={claimer !== null && current !== claimer && teamOf(current) === teamOf(claimer)}
+              eligible={trumpRevealed && claimer !== null}
             />
             {playable && <PlayHint reason={playable.reason} trumpRevealed={trumpRevealed} />}
           </div>
