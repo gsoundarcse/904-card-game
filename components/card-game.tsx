@@ -361,15 +361,6 @@ export function CardGame() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {playable?.canAskTrump && (
-              <button
-                type="button"
-                onClick={handleAskTrump}
-                className="rounded-full border border-gold/60 bg-gold/10 px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wide text-gold transition-colors hover:bg-gold/20"
-              >
-                Ask for trump
-              </button>
-            )}
             <StrongSupport
               revealed={trumpRevealed}
               eligible={trumpRevealed && claimer !== null}
@@ -417,6 +408,30 @@ export function CardGame() {
             </div>
           )}
         </div>
+
+        {/* Play controls — the ask sits here, on its own row, so nothing can
+            overlap it and the hit target is a comfortable size. */}
+        {phase === 'playing' && (
+          <div className="relative z-20 mt-3 flex flex-wrap items-center justify-center gap-3 border-t border-border pt-3">
+            {playable?.canAskTrump && (
+              <button
+                type="button"
+                onClick={handleAskTrump}
+                disabled={resolving}
+                className="cursor-pointer rounded-xl border border-gold/60 bg-gold/10 px-6 py-2.5 text-xs font-bold uppercase tracking-wide text-gold transition-colors hover:bg-gold/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Ask for trump
+              </button>
+            )}
+            <p className="w-full text-center font-mono text-[11px] text-muted-foreground">
+              {trumpRevealed
+                ? 'Trump is out — it beats the led suit.'
+                : playable?.canAskTrump
+                  ? 'You are void. Play any card, or turn the trump over first.'
+                  : 'Trump is still face down.'}
+            </p>
+          </div>
+        )}
 
         {/* Bidding controls */}
         {phase === 'bidding' && (

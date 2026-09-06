@@ -419,7 +419,7 @@ function PlayControls({
           type="button"
           onClick={() => send({ type: 'askTrump' })}
           disabled={pending}
-          className="rounded-xl border border-gold/60 bg-gold/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-gold hover:bg-gold/20 disabled:opacity-40"
+          className="relative z-20 cursor-pointer rounded-xl border border-gold/60 bg-gold/10 px-6 py-2.5 text-xs font-bold uppercase tracking-wide text-gold hover:bg-gold/20 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Ask for trump
         </button>

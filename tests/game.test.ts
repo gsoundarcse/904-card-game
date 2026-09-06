@@ -460,3 +460,29 @@ describe('a fully played round', () => {
     }
   })
 })
+
+describe('the position from the reported screenshot', () => {
+  // Clubs led with 10♣ 9♣ J♣; the player on turn holds 3♠ A♠ 10♠ J♥ 9♦ and no
+  // club at all, with the trump still face down. The ask must be on offer.
+  const onTurn = hand('Spades-3', 'Spades-A', 'Spades-10', 'Hearts-J', 'Diamonds-9')
+  const led = [play(0, 'Clubs-10'), play(1, 'Clubs-9'), play(2, 'Clubs-J')]
+
+  it('offers the ask to a player with no card of the led suit', () => {
+    const result = getPlayable(onTurn, led, false)
+    assert.equal(result.reason, 'void')
+    assert.equal(result.canAskTrump, true, 'the button should be live here')
+  })
+
+  it('lets them play any of their five cards', () => {
+    const result = getPlayable(onTurn, led, false)
+    assert.equal(result.playableIds.size, 5)
+    assert.deepEqual(
+      [...result.playableIds].sort(),
+      ['Diamonds-9', 'Hearts-J', 'Spades-10', 'Spades-3', 'Spades-A'],
+    )
+  })
+
+  it('withdraws the ask once trump is already out', () => {
+    assert.equal(getPlayable(onTurn, led, true).canAskTrump, false)
+  })
+})
