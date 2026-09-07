@@ -6,6 +6,7 @@ import {
   buildDeck,
   CARDS_PER_PLAYER,
   CLAIM_STEP,
+  cardLimit,
   chooseBotCard,
   type Card,
   evaluateTrick,
@@ -14,6 +15,7 @@ import {
   MIN_CLAIM,
   shuffle,
   sortHand,
+  settleRound,
   SUIT_SYMBOL,
   type Suit,
   teamOf,
@@ -76,6 +78,7 @@ export function CardGame() {
   const [lastTrick, setLastTrick] = useState<TrickPlay[]>([])
   const [trickNumber, setTrickNumber] = useState(0)
   const [teamScores, setTeamScores] = useState<[number, number]>([0, 0])
+  const [matchCards, setMatchCards] = useState<[number, number]>([0, 0])
   const [teamTricks, setTeamTricks] = useState<[number, number]>([0, 0])
   const [doubleCalled, setDoubleCalled] = useState(false)
   const [banner, setBanner] = useState<string | null>(null)
@@ -90,7 +93,7 @@ export function CardGame() {
     bannerTimer.current = setTimeout(() => setBanner(null), ms)
   }, [])
 
-  const startGame = useCallback((count: number, names: string[], solo = false) => {
+  const startGame = useCallback((count: number, names: string[], solo = false, preserveMatch = false) => {
     const deck = shuffle(buildDeck(count))
     const dealt: Player[] = Array.from({ length: count }, (_, i) => ({
       name: solo && i > 0 ? `Bot ${i}` : names[i] ?? `Player ${i + 1}`,
@@ -119,6 +122,7 @@ export function CardGame() {
     setTrick([])
     setLastTrick([])
     setTrickNumber(0)
+    if (!preserveMatch) setMatchCards([0, 0])
     setTeamScores([0, 0])
     setTeamTricks([0, 0])
     setDoubleCalled(false)
@@ -126,6 +130,11 @@ export function CardGame() {
     setResolving(false)
     setPhase('dealing')
   }, [])
+
+  const nextRound = useCallback(() => {
+    const names = players.map((player) => player.name)
+    startGame(n, names, players.some((player) => player.isBot), true)
+  }, [n, players, startGame])
 
   const botDelay = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -346,9 +355,26 @@ export function CardGame() {
       setTrick([])
       setCurrent(winner)
       setResolving(false)
-      if (completed >= CARDS_PER_PLAYER) setPhase('roundOver')
+      if (completed >= CARDS_PER_PLAYER) {
+        const claimerTeam = teamOf(claimer ?? 0)
+        const finalTeamTricks: [number, number] = [teamTricks[0], teamTricks[1]]
+        finalTeamTricks[teamOf(winner)] += 1
+        const settlement = settleRound({
+          claim,
+          claimerTeam,
+          captured: teamScores[claimerTeam] + (teamOf(winner) === claimerTeam ? pts : 0),
+          teamTricks: finalTeamTricks,
+          doubleCalled,
+        })
+        setMatchCards((previous) => {
+          const updated: [number, number] = [previous[0], previous[1]]
+          updated[settlement.penalisedTeam] += settlement.cards
+          return updated
+        })
+        setPhase('roundOver')
+      }
     },
-    [trumpSuit, trumpRevealed, trickNumber, players, setTempBanner],
+    [trumpSuit, trumpRevealed, trickNumber, players, setTempBanner, claimer, claim, teamTricks, teamScores, doubleCalled],
   )
 
   const handlePlayCard = useCallback(
@@ -489,21 +515,14 @@ export function CardGame() {
         trumpCard={trumpCard ?? revealedTrumpCard}
         trumpRevealed={trumpRevealed}
         trumpPlaced={trumpCard !== null || trumpRevealed}
+        hideBottomSeat
         completedTrick={trick.length === 0 && lastTrick.length > 0}
         banner={banner}
       />
 
       {/* Active player control tray */}
       <section className="rounded-2xl border border-border bg-secondary/50 p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className={cn('h-2.5 w-2.5 rounded-full', teamOf(current) === 0 ? 'bg-team-a' : 'bg-team-b')} aria-hidden />
-            <h2 className="font-serif text-lg font-bold text-gold-soft">{activePlayer?.name}</h2>
-            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-              {TEAM_NAME[teamOf(current)]}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="mb-2 flex min-h-0 flex-wrap items-center justify-end gap-2">
             <StrongSupport
               revealed={trumpRevealed}
               eligible={trumpRevealed && claimer !== null}
@@ -515,11 +534,10 @@ export function CardGame() {
               />
             )}
             {playable && <PlayHint reason={playable.reason} trumpRevealed={trumpRevealed} />}
-          </div>
         </div>
 
         {/* Hand */}
-        <div className="mobile-hand-tray flex min-h-36 items-end justify-center overflow-visible pb-2 px-1 sm:px-3">
+        <div className="mobile-hand-tray flex min-h-28 items-end justify-center overflow-visible pb-2 px-1 sm:min-h-36 sm:px-3">
           <div className="grid w-full grid-cols-6 items-end gap-1 sm:gap-3">
           {phase === 'dealing' ? (
             <div className="flex items-end justify-center gap-1">
@@ -540,7 +558,7 @@ export function CardGame() {
                 <ClickableCard
                   key={card.id}
                   card={card}
-                  size="md"
+                  size="lg"
                   mobileSize="sm"
                   mobileGrid
                   fan={false}
@@ -687,6 +705,9 @@ export function CardGame() {
           claim={claim}
           captured={teamScores[claimerTeam]}
           teamScores={teamScores}
+          matchCards={matchCards}
+          cardLimit={cardLimit(n)}
+          onNextRound={nextRound}
           onPlayAgain={resetToConfig}
         />
       )}
@@ -808,6 +829,9 @@ function RoundOver({
   claim,
   captured,
   teamScores,
+  matchCards,
+  cardLimit: lossLimit,
+  onNextRound,
   onPlayAgain,
 }: {
   claimerName: string
@@ -815,15 +839,20 @@ function RoundOver({
   claim: number
   captured: number
   teamScores: [number, number]
+  matchCards: [number, number]
+  cardLimit: number
+  onNextRound: () => void
   onPlayAgain: () => void
 }) {
   const success = captured >= claim
+  const loser = matchCards.findIndex((cards) => cards >= lossLimit) as 0 | 1 | -1
+  const matchOver = loser !== -1
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl border-2 border-gold/50 bg-popover p-8 text-center shadow-2xl">
-        <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">Round Over</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">{matchOver ? 'Match Over' : 'Round Over'}</p>
         <h2 className={cn('mt-2 font-serif text-4xl font-bold', success ? 'text-gold-soft' : 'text-destructive')}>
-          {success ? 'Claim Made!' : 'Claim Failed'}
+          {matchOver ? `${TEAM_NAME[loser]} loses` : success ? 'Claim Made!' : 'Claim Failed'}
         </h2>
         <p className="mt-3 text-sm text-muted-foreground">
           {claimerName} ({TEAM_NAME[claimerTeam]}) claimed <span className="font-semibold text-gold">{claim}</span> and
@@ -835,16 +864,18 @@ function RoundOver({
               <span className={cn('text-[10px] font-semibold uppercase tracking-widest', t === 0 ? 'text-team-a' : 'text-team-b')}>
                 {TEAM_NAME[t]}
               </span>
-              <span className="font-serif text-3xl font-bold text-foreground">{teamScores[t]}</span>
+              <span className="font-serif text-3xl font-bold text-foreground">
+                {teamScores[t]}<span className="ml-1 font-mono text-xs font-normal text-muted-foreground">({matchCards[t]}/{lossLimit})</span>
+              </span>
             </div>
           ))}
         </div>
         <button
           type="button"
-          onClick={onPlayAgain}
+          onClick={matchOver ? onPlayAgain : onNextRound}
           className="mt-6 w-full rounded-xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5"
         >
-          Play Again
+          {matchOver ? 'New Game' : 'Deal Next Round'}
         </button>
       </div>
     </div>

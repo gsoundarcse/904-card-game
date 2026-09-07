@@ -13,6 +13,14 @@ const OPTIONS = [
     blurb: 'Classic short deck. Every card carries points.',
   },
   {
+    game: '904',
+    enabled: true,
+    count: 6,
+    deck: '36-card deck',
+    ranks: '2 · 3 · J · 9 · A · 10 · K · Q · 8',
+    blurb: 'Full six-player table with the 904-point deck.',
+  },
+  {
     game: 'Rani',
     enabled: false,
     count: 6,

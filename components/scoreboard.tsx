@@ -33,7 +33,7 @@ export function Scoreboard({
           <div
             key={t}
             className={cn(
-              'flex min-w-24 flex-col rounded-xl border px-4 py-2 shadow-lg',
+              'flex min-w-20 flex-col rounded-lg border px-2.5 py-1.5 shadow-md',
               t === 0 ? 'border-team-a/50 bg-team-a/10' : 'border-team-b/50 bg-team-b/10',
               claimerTeam === t && 'ring-2 ring-gold',
             )}
@@ -42,7 +42,7 @@ export function Scoreboard({
               {TEAM_NAME[t]}
             </span>
             <span className="font-serif text-3xl font-bold leading-none text-foreground">
-              {teamScores[t]}<span className="ml-1 font-mono text-xs font-normal text-muted-foreground">/ {claimTarget || '—'}</span>
+              {teamScores[t]}<span className="ml-1 font-mono text-[10px] font-normal text-muted-foreground">/ {claimTarget || '—'}</span>
             </span>
             <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
               {claimTarget

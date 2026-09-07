@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { type Card, type Suit, type TrickPlay } from '@/lib/game'
+import { TEAM_NAME, type Card, type Suit, type TrickPlay } from '@/lib/game'
 import { CardBack, CardFace, MysteryCard } from '@/components/playing-card'
 
 export interface SeatView {
@@ -20,7 +20,14 @@ function seatPosition(index: number, total: number) {
   const angle = (Math.PI / 2) + (index / total) * Math.PI * 2
   const x = 50 + Math.cos(angle) * 43
   const y = 50 + Math.sin(angle) * 40
-  return { left: `${x}%`, top: `${y}%` }
+  const mobileX = Math.min(82, Math.max(18, x))
+  const mobileY = Math.min(86, Math.max(16, y))
+  return {
+    '--seat-left': `${x}%`,
+    '--seat-top': `${y}%`,
+    '--seat-mobile-left': `${mobileX}%`,
+    '--seat-mobile-top': `${mobileY}%`,
+  } as React.CSSProperties
 }
 
 function Seat({ seat }: { seat: SeatView }) {
@@ -39,6 +46,12 @@ function Seat({ seat }: { seat: SeatView }) {
         <span className={cn('h-2 w-2 rounded-full', seat.team === 0 ? 'bg-team-a' : 'bg-team-b')} aria-hidden />
         <span className="max-w-[28vw] truncate text-xs font-semibold text-foreground sm:max-w-32 sm:text-sm">{seat.name}</span>
       </div>
+      <span className={cn(
+        'rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-widest',
+        seat.team === 0 ? 'bg-team-a/15 text-team-a' : 'bg-team-b/15 text-team-b',
+      )}>
+        {TEAM_NAME[seat.team]}
+      </span>
 
       <div className="flex h-8 items-center justify-center">
         {seat.handCount > 0 ? (
@@ -99,6 +112,7 @@ export function GameTable({
   trumpCard,
   trumpRevealed,
   trumpPlaced,
+  hideBottomSeat = false,
   completedTrick = false,
   banner,
 }: {
@@ -114,6 +128,7 @@ export function GameTable({
    * would vanish for everyone but the claimer.
    */
   trumpPlaced?: boolean
+  hideBottomSeat?: boolean
   banner: string | null
 }) {
   const [trumpDismissed, setTrumpDismissed] = useState(false)
@@ -176,7 +191,7 @@ export function GameTable({
         ) : (
           trick.map((play) => (
             <div key={play.card.id} className="flex flex-col items-center gap-1.5">
-              <CardFace card={play.card} size="md" className="sm:h-32 sm:w-24 sm:text-sm" />
+              <CardFace card={play.card} size="lg" className="h-24 w-16 sm:h-32 sm:w-24" />
               <span className="max-w-28 truncate font-mono text-xs font-semibold text-foreground/80">
                 {seats[play.player].name}
               </span>
@@ -196,7 +211,7 @@ export function GameTable({
 
       {/* seats */}
       {seats.map((seat, i) => (
-        <div key={i} className="absolute z-20" style={seatPosition(i, seats.length)}>
+        <div key={i} className={cn('game-table-seat absolute z-20', hideBottomSeat && i === 0 && 'hidden')} style={seatPosition(i, seats.length)}>
           <Seat seat={seat} />
         </div>
       ))}

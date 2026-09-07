@@ -254,6 +254,7 @@ function Table({
         trumpCard={r.trumpCard}
         trumpRevealed={r.trumpRevealed}
         trumpPlaced={view.trumpFaceDown || r.trumpRevealed}
+        hideBottomSeat
         completedTrick={r.trick.length === 0 && r.lastTrick !== null}
         banner={banner}
       />
@@ -276,7 +277,7 @@ function Table({
                 <ClickableCard
                   key={card.id}
                   card={card}
-                  size="md"
+                  size="lg"
                   mobileSize="sm"
                   mobileGrid
                   fan={false}

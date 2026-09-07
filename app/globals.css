@@ -131,9 +131,30 @@
   animation: deal-card 420ms ease-out both;
 }
 
+@media (max-width: 767px) {
+  .game-table {
+    height: 150px;
+    margin-bottom: -0.5rem;
+  }
+
+  .game-table-seat {
+    left: var(--seat-mobile-left);
+    top: var(--seat-mobile-top);
+  }
+
+  .active-tray {
+    margin-top: -1.25rem;
+    padding: 0.5rem;
+  }
+
+  .active-tray .mobile-hand-tray {
+    min-height: 4rem;
+  }
+}
+
 @media (max-width: 767px) and (orientation: landscape) {
   .mobile-hand-tray {
-    min-height: 5.5rem;
+    min-height: 4.5rem;
     padding-bottom: 0.25rem;
   }
 
