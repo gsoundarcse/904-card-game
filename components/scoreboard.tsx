@@ -27,18 +27,18 @@ export function Scoreboard({
   onReset: () => void
 }) {
   return (
-    <div className="flex flex-wrap items-stretch justify-between gap-3">
+    <div className="scoreboard flex flex-wrap items-stretch justify-between gap-3">
       <div className="flex items-center gap-3">
         {([0, 1] as const).map((t) => (
           <div
             key={t}
             className={cn(
-              'flex min-w-20 flex-col rounded-lg border px-2.5 py-1.5 shadow-md',
+              'team-score-card flex min-w-20 flex-col rounded-lg border px-2.5 py-1.5 shadow-md',
               t === 0 ? 'border-team-a/50 bg-team-a/10' : 'border-team-b/50 bg-team-b/10',
               claimerTeam === t && 'ring-2 ring-gold',
             )}
           >
-            <span className={cn('text-[10px] font-semibold uppercase tracking-widest', t === 0 ? 'text-team-a' : 'text-team-b')}>
+            <span className={cn('text-xs font-bold uppercase tracking-widest sm:text-sm', t === 0 ? 'text-team-a' : 'text-team-b')}>
               {TEAM_NAME[t]}
             </span>
             <span className="font-serif text-3xl font-bold leading-none text-foreground">

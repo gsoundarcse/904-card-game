@@ -79,9 +79,9 @@
   --gold-soft: oklch(0.86 0.09 90);
   --suit-red: oklch(0.55 0.2 25);
   --team-a: oklch(0.78 0.13 85);
-  --team-b: oklch(0.7 0.11 235);
+  --team-b: oklch(0.7 0.18 25);
   --team-a-glow: oklch(0.78 0.13 85 / 0.16);
-  --team-b-glow: oklch(0.7 0.11 235 / 0.16);
+  --team-b-glow: oklch(0.7 0.18 25 / 0.2);
 }
 
 @layer base {
@@ -132,13 +132,75 @@
 }
 
 @media (max-width: 767px) {
+  .scoreboard {
+    gap: 0.4rem;
+    margin-bottom: -0.35rem;
+  }
+
+  .scoreboard > div:first-child {
+    gap: 0.35rem;
+  }
+
+  .team-score-card {
+    min-width: 4.4rem;
+    padding: 0.35rem 0.55rem;
+  }
+
+  .team-score-card .font-serif {
+    font-size: 1.75rem;
+  }
+
   .game-table {
-    height: 150px;
-    margin-bottom: -0.5rem;
+    height: 300px;
+    margin-bottom: 0;
+  }
+
+  .four-seat-table {
+    height: 300px;
+  }
+
+  .four-seat-table .game-table-seat {
+    transform: translate(-50%, -50%) scale(0.82);
+    transform-origin: center;
+  }
+
+  .four-seat-table .game-table-seat:nth-child(1) {
+    display: none;
+  }
+
+  .four-seat-table .game-table-seat:nth-child(2) {
+    left: 23%;
+    top: 66%;
+    transform: translate(-50%, -50%) scale(0.74);
+  }
+
+  .four-seat-table .game-table-seat:nth-last-child(2) {
+    left: 50%;
+    top: 27%;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+
+  .four-seat-table .game-table-seat:last-child {
+    left: 85%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.74);
+  }
+
+  .four-seat-table .central-pile {
+    top: 61%;
   }
 
   .six-seat-table {
-    height: 230px;
+    height: 340px;
+  }
+
+  .six-seat-table .six-seat-station {
+    transform: translate(-50%, -50%) scale(0.52);
+    transform-origin: center;
+  }
+
+  .six-seat-table .six-seat-station:nth-last-child(3) {
+    top: 7%;
   }
 
   .game-table-seat {
@@ -147,7 +209,7 @@
   }
 
   .active-tray {
-    margin-top: -1.25rem;
+    margin-top: 0;
     padding: 0.5rem;
   }
 
@@ -164,6 +226,15 @@
 
   .game-table {
     height: 460px;
+  }
+
+  .four-seat-table {
+    height: 390px;
+    max-width: 64rem;
+  }
+
+  .four-seat-table .central-pile {
+    top: 54%;
   }
 
   .six-seat-table {

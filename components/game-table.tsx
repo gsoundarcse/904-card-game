@@ -47,7 +47,7 @@ function Seat({ seat }: { seat: SeatView }) {
         <span className="max-w-[28vw] truncate text-xs font-semibold text-foreground sm:max-w-32 sm:text-sm">{seat.name}</span>
       </div>
       <span className={cn(
-        'rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-widest',
+        'rounded-full px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-widest sm:text-xs',
         seat.team === 0 ? 'bg-team-a/15 text-team-a' : 'bg-team-b/15 text-team-b',
       )}>
         {TEAM_NAME[seat.team]}
@@ -136,6 +136,7 @@ export function GameTable({
   const displayTrumpCard: Card | null = trumpCard ?? (trumpSuit ? { id: 'trump', suit: trumpSuit, rank: 'A', points: 0 } : null)
   const showTrump = trumpPlaced ?? trumpSuit !== null
   const showTrumpIndicator = showTrump && (!trumpRevealed || !trumpDismissed)
+  const tableLayout = seats.length === 6 ? 'six-seat-table' : 'four-seat-table'
   const sixSeatTable = seats.length === 6
 
   useEffect(() => {
@@ -154,7 +155,7 @@ export function GameTable({
   return (
     <div className={cn(
       'game-table relative mx-auto h-[380px] w-full max-w-4xl overflow-hidden rounded-3xl border border-team-b/30 bg-[linear-gradient(145deg,var(--felt-dark),var(--felt)_48%,var(--felt-dark))] shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:h-[560px]',
-      sixSeatTable && 'six-seat-table',
+      tableLayout,
     )}>
       {/* felt surface */}
       <div className="absolute inset-3 rounded-2xl border border-gold/30 bg-[radial-gradient(ellipse_at_center,var(--felt)_0%,var(--felt-dark)_100%)] shadow-[inset_0_0_70px_rgba(0,0,0,0.4)] sm:inset-5 sm:rounded-3xl">
@@ -187,7 +188,7 @@ export function GameTable({
       )}
 
       {/* central pile */}
-      <div className="absolute left-1/2 top-1/2 flex min-h-28 max-w-[72%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-1 rounded-xl border border-white/15 bg-black/15 px-2 py-2 shadow-[inset_0_0_24px_rgba(0,0,0,0.18)] sm:min-h-40 sm:max-w-[65%] sm:gap-2 sm:rounded-2xl sm:px-5 sm:py-4">
+      <div className="central-pile absolute left-1/2 top-1/2 flex min-h-28 max-w-[72%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-1 rounded-xl border border-white/15 bg-black/15 px-2 py-2 shadow-[inset_0_0_24px_rgba(0,0,0,0.18)] sm:min-h-40 sm:max-w-[65%] sm:gap-2 sm:rounded-2xl sm:px-5 sm:py-4">
         {trick.length === 0 || (completedTrick && !completedVisible) ? (
           <span className="font-serif text-sm italic text-foreground/50">
             {banner ? '' : 'The pile is empty'}
@@ -215,7 +216,11 @@ export function GameTable({
 
       {/* seats */}
       {seats.map((seat, i) => (
-        <div key={i} className={cn('game-table-seat absolute z-20', hideBottomSeat && i === 0 && 'hidden')} style={seatPosition(i, seats.length)}>
+        <div
+          key={i}
+          className={cn('game-table-seat absolute z-20', sixSeatTable && 'six-seat-station', hideBottomSeat && i === 0 && 'hidden')}
+          style={seatPosition(i, seats.length)}
+        >
           <Seat seat={seat} />
         </div>
       ))}
