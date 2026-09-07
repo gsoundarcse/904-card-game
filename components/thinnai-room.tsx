@@ -260,20 +260,22 @@ function Table({
           </span>
         </div>
 
-        <div className="flex min-h-36 items-end justify-center overflow-x-auto pb-2 pl-3">
+        <div className="flex min-h-36 items-end justify-start overflow-x-auto pb-2 pl-2 sm:justify-center sm:pl-3">
+          <div className="flex w-max min-w-full items-end justify-center gap-1 px-1 sm:gap-2">
           {view.yourHand.length ? (
             view.yourHand.map((card) =>
               view.status === 'playing' ? (
                 <ClickableCard
                   key={card.id}
                   card={card}
+                  size="md"
                   fan={false}
                   disabled={pending || !yourTurn || !playable.has(card.id)}
                   onClick={() => send({ type: 'playCard', cardId: card.id })}
                 />
               ) : (
                 <div key={card.id} className="-ml-3 shrink-0 first:ml-0">
-                  <CardFace card={card} size="lg" />
+                  <CardFace card={card} size="md" className="sm:h-32 sm:w-24 sm:text-sm" />
                 </div>
               ),
             )
@@ -284,7 +286,7 @@ function Table({
           {view.yourTrumpCard && (
             <div className="ml-4 flex shrink-0 flex-col items-center gap-1 border-l border-border pl-4">
               <div className="relative">
-                <CardBack size="lg" className="opacity-70" />
+                <CardBack size="md" className="opacity-70 sm:h-32 sm:w-24" />
                 <span className="absolute inset-0 flex items-center justify-center font-mono text-[9px] uppercase tracking-widest text-gold">
                   face down
                 </span>
@@ -295,6 +297,7 @@ function Table({
               </span>
             </div>
           )}
+          </div>
         </div>
 
         {view.status === 'bidding' && yourTurn && <BidControls view={view} send={send} pending={pending} />}

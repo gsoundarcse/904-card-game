@@ -471,11 +471,12 @@ export function CardGame() {
         </div>
 
         {/* Hand */}
-        <div className="flex min-h-36 items-end justify-center overflow-x-auto pb-2 pl-3">
+        <div className="flex min-h-36 items-end justify-start overflow-x-auto pb-2 pl-2 sm:justify-center sm:pl-3">
+          <div className="flex w-max min-w-full items-end justify-center gap-1 px-1 sm:gap-2">
           {phase === 'dealing' ? (
             <div className="flex items-end justify-center gap-1">
               {Array.from({ length: activePlayer?.hand.length ?? 0 }).map((_, index) => (
-                <CardBack key={index} size="lg" className="animate-deal-card" />
+                <CardBack key={index} size="md" className="animate-deal-card sm:h-32 sm:w-24" />
               ))}
             </div>
           ) : activePlayer?.hand.length ? (
@@ -484,6 +485,7 @@ export function CardGame() {
                 <ClickableCard
                   key={card.id}
                   card={card}
+                  size="md"
                   fan={false}
                   disabled={resolving || !playable?.playableIds.has(card.id)}
                   onClick={() => handlePlayCard(card.id)}
@@ -493,7 +495,7 @@ export function CardGame() {
               // Bidding / trump: hand is view-only but fully legible.
               activePlayer.hand.map((card) => (
                 <div key={card.id} className="-ml-3 shrink-0 first:ml-0">
-                  <CardFace card={card} size="lg" />
+                  <CardFace card={card} size="md" className="sm:h-32 sm:w-24 sm:text-sm" />
                 </div>
               ))
             )
@@ -504,11 +506,12 @@ export function CardGame() {
           {trumpCard && current === claimer && (
             <div className="ml-4 flex shrink-0 flex-col items-center gap-1 border-l border-border pl-4">
               <div className="relative">
-                <CardBack size="lg" className="opacity-80" />
+                <CardBack size="md" className="opacity-80 sm:h-32 sm:w-24" />
               </div>
               <span className="font-mono text-[10px] text-muted-foreground">Trump card · locked</span>
             </div>
           )}
+          </div>
         </div>
 
         {phase === 'dealing' && (
