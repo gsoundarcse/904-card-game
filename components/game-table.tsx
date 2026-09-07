@@ -218,6 +218,7 @@ export function GameTable({
       {seats.map((seat, i) => (
         <div
           key={i}
+          data-seat-index={i}
           className={cn('game-table-seat absolute z-20', sixSeatTable && 'six-seat-station', hideBottomSeat && i === 0 && 'hidden')}
           style={seatPosition(i, seats.length)}
         >

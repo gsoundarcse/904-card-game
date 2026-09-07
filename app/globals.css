@@ -156,38 +156,38 @@
   }
 
   .four-seat-table {
-    height: 300px;
+    height: 320px;
   }
 
   .four-seat-table .game-table-seat {
-    transform: translate(-50%, -50%) scale(0.82);
+    transform: scale(0.68);
     transform-origin: center;
   }
 
-  .four-seat-table .game-table-seat:nth-child(1) {
+  /* seat 0 is the human player, hidden on the pass-and-play mobile table */
+  .four-seat-table .game-table-seat[data-seat-index='0'] {
     display: none;
   }
 
-  .four-seat-table .game-table-seat:nth-child(2) {
-    left: 23%;
-    top: 66%;
-    transform: translate(-50%, -50%) scale(0.74);
+  .four-seat-table .game-table-seat[data-seat-index='1'] {
+    left: 14%;
+    top: 58%;
   }
 
-  .four-seat-table .game-table-seat:nth-last-child(2) {
+  .four-seat-table .game-table-seat[data-seat-index='2'] {
     left: 50%;
-    top: 27%;
-    transform: translate(-50%, -50%) scale(0.7);
+    top: 18%;
+    transform: scale(0.64);
   }
 
-  .four-seat-table .game-table-seat:last-child {
-    left: 85%;
-    top: 50%;
-    transform: translate(-50%, -50%) scale(0.74);
+  .four-seat-table .game-table-seat[data-seat-index='3'] {
+    left: 86%;
+    top: 58%;
   }
 
   .four-seat-table .central-pile {
-    top: 61%;
+    top: 58%;
+    max-width: 50%;
   }
 
   .six-seat-table {
