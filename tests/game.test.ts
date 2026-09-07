@@ -5,6 +5,7 @@ import {
   buildDeck,
   CARDS_PER_PLAYER,
   cardLimit,
+  chooseBotCard,
   type Card,
   evaluateTrick,
   getPlayable,
@@ -263,6 +264,44 @@ describe('evaluateTrick', () => {
     const trick = [play(3, 'Clubs-9'), play(0, 'Clubs-A'), play(1, 'Diamonds-2')]
     const winner = evaluateTrick(trick, 'Spades', true)
     assert.ok(trick.some((p) => p.player === winner), 'winner participated')
+  })
+})
+
+describe('chooseBotCard', () => {
+  it('uses the cheapest legal card that can beat an opponent', () => {
+    const chosen = chooseBotCard(
+      hand('Spades-2', 'Spades-8'),
+      new Set(['Spades-2', 'Spades-8']),
+      [play(0, 'Spades-10')],
+      null,
+      false,
+      1,
+    )
+    assert.equal(chosen?.id, 'Spades-2')
+  })
+
+  it('supports a teammate by adding points without overtaking their trick', () => {
+    const chosen = chooseBotCard(
+      hand('Clubs-2', 'Clubs-8'),
+      new Set(['Clubs-2', 'Clubs-8']),
+      [play(0, 'Hearts-2')],
+      null,
+      false,
+      2,
+    )
+    assert.equal(chosen?.id, 'Clubs-2')
+  })
+
+  it('never chooses a card outside the legal playable set', () => {
+    const chosen = chooseBotCard(
+      hand('Spades-8', 'Hearts-2'),
+      new Set(['Spades-8']),
+      [play(0, 'Spades-10')],
+      null,
+      false,
+      1,
+    )
+    assert.equal(chosen?.id, 'Spades-8')
   })
 })
 

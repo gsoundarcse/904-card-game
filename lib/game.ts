@@ -55,7 +55,7 @@ export function rankStrength(rank: Rank): number {
 
 export const CARDS_PER_PLAYER = 6
 export const MIN_CLAIM = 500
-export const MAX_CLAIM = 904
+export const MAX_CLAIM = 903
 export const CLAIM_STEP = 10
 
 export function buildDeck(playerCount: number): Card[] {
@@ -166,6 +166,38 @@ export function evaluateTrick(
     if (rankStrength(play.card.rank) < rankStrength(winner.card.rank)) winner = play
   }
   return winner.player
+}
+
+/** Choose a legal bot play using only cards and plays visible at the table. */
+export function chooseBotCard(
+  hand: Card[],
+  playableIds: Set<string>,
+  trick: TrickPlay[],
+  trumpSuit: Suit | null,
+  trumpRevealed: boolean,
+  seat: number,
+): Card | null {
+  const legal = hand.filter((card) => playableIds.has(card.id))
+  if (legal.length === 0) return null
+
+  const value = (card: Card) => card.points * 100 - rankStrength(card.rank)
+  if (trick.length === 0) return legal.reduce((best, card) => (value(card) > value(best) ? card : best))
+
+  const currentWinner = evaluateTrick(trick, trumpSuit, trumpRevealed)
+  const teammateWinning = teamOf(currentWinner) === teamOf(seat)
+  const winners = legal.filter(
+    (card) => evaluateTrick([...trick, { player: seat, card }], trumpSuit, trumpRevealed) === seat,
+  )
+
+  if (teammateWinning) {
+    const support = legal.filter(
+      (card) => evaluateTrick([...trick, { player: seat, card }], trumpSuit, trumpRevealed) !== seat,
+    )
+    return (support.length > 0 ? support : legal).reduce((best, card) => (value(card) > value(best) ? card : best))
+  }
+
+  if (winners.length > 0) return winners.reduce((best, card) => (value(card) < value(best) ? card : best))
+  return legal.reduce((best, card) => (value(card) < value(best) ? card : best))
 }
 
 export function trickPoints(trick: TrickPlay[]): number {

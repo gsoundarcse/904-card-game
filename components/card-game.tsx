@@ -6,6 +6,7 @@ import {
   buildDeck,
   CARDS_PER_PLAYER,
   CLAIM_STEP,
+  chooseBotCard,
   type Card,
   evaluateTrick,
   getPlayable,
@@ -390,11 +391,18 @@ export function CardGame() {
         handleAskTrump()
         return
       }
-      const cardId = Array.from(playable.playableIds)[0]
-      if (cardId) handlePlayCard(cardId)
+      const card = chooseBotCard(
+        players[current].hand,
+        playable.playableIds,
+        trick,
+        trumpSuit,
+        trumpRevealed,
+        current,
+      )
+      if (card) handlePlayCard(card.id)
     }, 700)
     return () => { if (botDelay.current) clearTimeout(botDelay.current) }
-  }, [phase, resolving, current, players, playable, handleAskTrump, handlePlayCard])
+  }, [phase, resolving, current, players, playable, trick, trumpSuit, trumpRevealed, handleAskTrump, handlePlayCard])
 
   useEffect(() => () => { if (bannerTimer.current) clearTimeout(bannerTimer.current) }, [])
 
@@ -463,7 +471,7 @@ export function CardGame() {
     <main className="mx-auto flex min-h-svh w-full max-w-5xl flex-col gap-4 px-3 py-4 sm:px-6 sm:py-6">
       <Scoreboard
         teamScores={teamScores}
-        targetPoints={players.length >= 6 ? 904 : 884}
+        claimTarget={claim}
         claimerName={claimer !== null ? players[claimer].name : null}
         claimerTeam={claimerTeam}
         claim={claim}
@@ -480,6 +488,7 @@ export function CardGame() {
         trumpCard={trumpCard ?? revealedTrumpCard}
         trumpRevealed={trumpRevealed}
         trumpPlaced={trumpCard !== null || trumpRevealed}
+        completedTrick={trick.length === 0 && lastTrick.length > 0}
         banner={banner}
       />
 
@@ -498,7 +507,7 @@ export function CardGame() {
               revealed={trumpRevealed}
               eligible={trumpRevealed && claimer !== null}
             />
-            {canCallDouble && activePlayer?.hand[0] && (
+            {canCallDouble && !activePlayer?.isBot && activePlayer.hand[0] && (
               <DoubleControl
                 card={activePlayer.hand[0]}
                 onConfirm={() => handlePlayCard(activePlayer.hand[0].id, true)}
@@ -516,6 +525,13 @@ export function CardGame() {
               {Array.from({ length: activePlayer?.hand.length ?? 0 }).map((_, index) => (
                 <CardBack key={index} size="md" className="animate-deal-card sm:h-32 sm:w-24" />
               ))}
+            </div>
+          ) : activePlayer?.isBot ? (
+            <div className="flex items-end justify-center gap-1">
+              {activePlayer.hand.map((card) => (
+                <CardBack key={card.id} size="md" showLabel={false} className="h-16 w-11 sm:h-24 sm:w-16" />
+              ))}
+              <span className="ml-2 font-mono text-xs text-muted-foreground">{activePlayer.hand.length} cards hidden</span>
             </div>
           ) : activePlayer?.hand.length ? (
             phase === 'playing' ? (
@@ -651,7 +667,7 @@ export function CardGame() {
         )}
       </section>
 
-      {phase === 'trump' && claimer !== null && (
+      {phase === 'trump' && claimer !== null && !players[claimer].isBot && (
         <TrumpModal
           claimerName={players[claimer].name}
           claim={claim}

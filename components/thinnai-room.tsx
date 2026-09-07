@@ -247,6 +247,7 @@ function Table({
         trumpCard={r.trumpCard}
         trumpRevealed={r.trumpRevealed}
         trumpPlaced={view.trumpFaceDown || r.trumpRevealed}
+        completedTrick={r.trick.length === 0 && r.lastTrick !== null}
         banner={banner}
       />
 

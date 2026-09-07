@@ -5,7 +5,7 @@ import { SUIT_SYMBOL, type Suit, TEAM_NAME } from '@/lib/game'
 
 export function Scoreboard({
   teamScores,
-  targetPoints,
+  claimTarget,
   claimerName,
   claimerTeam,
   claim,
@@ -15,7 +15,7 @@ export function Scoreboard({
   onReset,
 }: {
   teamScores: [number, number]
-  targetPoints: number
+  claimTarget: number
   claimerName: string | null
   claimerTeam: 0 | 1 | null
   claim: number
@@ -40,10 +40,10 @@ export function Scoreboard({
               {TEAM_NAME[t]}
             </span>
             <span className="font-serif text-3xl font-bold leading-none text-foreground">
-              {teamScores[t]}<span className="ml-1 font-mono text-xs font-normal text-muted-foreground">/ {targetPoints}</span>
+              {teamScores[t]}<span className="ml-1 font-mono text-xs font-normal text-muted-foreground">/ {claimTarget || '—'}</span>
             </span>
             <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-              {targetPoints - teamScores[t]} pending
+              {claimTarget ? `${Math.max(0, claimTarget - teamScores[t])} needed` : 'claim pending'}
             </span>
           </div>
         ))}

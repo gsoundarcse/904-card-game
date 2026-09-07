@@ -99,6 +99,7 @@ export function GameTable({
   trumpCard,
   trumpRevealed,
   trumpPlaced,
+  completedTrick = false,
   banner,
 }: {
   seats: SeatView[]
@@ -106,6 +107,7 @@ export function GameTable({
   trumpSuit: Suit | null
   trumpCard?: Card | null
   trumpRevealed: boolean
+  completedTrick?: boolean
   /**
    * True once a trump card is lying face down. Online, other players are not
    * told the suit, so `trumpSuit` is null for them — without this the indicator
@@ -115,6 +117,7 @@ export function GameTable({
   banner: string | null
 }) {
   const [trumpDismissed, setTrumpDismissed] = useState(false)
+  const [completedVisible, setCompletedVisible] = useState(true)
   const displayTrumpCard: Card | null = trumpCard ?? (trumpSuit ? { id: 'trump', suit: trumpSuit, rank: 'A', points: 0 } : null)
   const showTrump = trumpPlaced ?? trumpSuit !== null
   const showTrumpIndicator = showTrump && (!trumpRevealed || !trumpDismissed)
@@ -122,6 +125,15 @@ export function GameTable({
   useEffect(() => {
     if (!trumpRevealed) setTrumpDismissed(false)
   }, [trumpRevealed])
+
+  useEffect(() => {
+    if (!completedTrick) {
+      setCompletedVisible(true)
+      return
+    }
+    const timer = setTimeout(() => setCompletedVisible(false), 1600)
+    return () => clearTimeout(timer)
+  }, [completedTrick, trick])
 
   return (
     <div className="relative mx-auto h-[380px] w-full max-w-4xl overflow-hidden rounded-3xl border border-team-b/30 bg-[linear-gradient(145deg,var(--felt-dark),var(--felt)_48%,var(--felt-dark))] shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:h-[560px]">
@@ -157,7 +169,7 @@ export function GameTable({
 
       {/* central pile */}
       <div className="absolute left-1/2 top-1/2 flex min-h-28 max-w-[72%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-1 rounded-xl border border-white/15 bg-black/15 px-2 py-2 shadow-[inset_0_0_24px_rgba(0,0,0,0.18)] sm:min-h-40 sm:max-w-[65%] sm:gap-2 sm:rounded-2xl sm:px-5 sm:py-4">
-        {trick.length === 0 ? (
+        {trick.length === 0 || (completedTrick && !completedVisible) ? (
           <span className="font-serif text-sm italic text-foreground/50">
             {banner ? '' : 'The pile is empty'}
           </span>

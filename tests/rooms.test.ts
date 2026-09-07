@@ -280,6 +280,7 @@ describe('bidding', () => {
     const first = t.room().round.current
     rejects(() => t.act(first, { type: 'bid', amount: 505 }), /steps of 10/)
     rejects(() => t.act(first, { type: 'bid', amount: 910 }), /Maximum bid/)
+    rejects(() => t.act(first, { type: 'bid', amount: 904 }), /Maximum bid/)
     rejects(() => t.act(first, { type: 'bid', amount: 500.5 }), /whole number/)
   })
 

@@ -319,9 +319,9 @@ function doBid(room: Room, player: RoomPlayer, amount: number) {
   if (room.status !== 'bidding') throw new ActionError('Not bidding')
   requireTurn(room, player)
   if (!Number.isInteger(amount)) throw new ActionError('Bid must be a whole number')
+  if (amount > MAX_CLAIM) throw new ActionError(`Maximum bid is ${MAX_CLAIM}`)
   if (amount % CLAIM_STEP !== 0) throw new ActionError(`Bids move in steps of ${CLAIM_STEP}`)
   if (amount < minAllowed(room)) throw new ActionError(`Bid must be at least ${minAllowed(room)}`)
-  if (amount > MAX_CLAIM) throw new ActionError(`Maximum bid is ${MAX_CLAIM}`)
 
   const r = room.round
   r.bids[player.seat] = amount

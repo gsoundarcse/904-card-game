@@ -26,7 +26,7 @@ strongest card in the game and also the most valuable.
 
 The four-player deck totals **884** points; the six-player deck totals **904**.
 
-> ⚠️ `MAX_CLAIM` is 904 at both table sizes, so a four-player claim above 884 is
+> ⚠️ `MAX_CLAIM` is 903 at both table sizes, so a four-player claim above 884 is
 > unwinnable. Left as-is because bids that high are rare, but worth knowing.
 
 ## Bidding
