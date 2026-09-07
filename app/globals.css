@@ -130,3 +130,17 @@
 .animate-deal-card {
   animation: deal-card 420ms ease-out both;
 }
+
+@media (max-width: 767px) and (orientation: landscape) {
+  .mobile-hand-tray {
+    min-height: 5.5rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .mobile-bid-controls {
+    position: static;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    box-shadow: none;
+  }
+}

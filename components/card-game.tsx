@@ -518,8 +518,8 @@ export function CardGame() {
         </div>
 
         {/* Hand */}
-        <div className="flex min-h-36 flex-wrap items-end justify-center gap-1 overflow-visible pb-2 px-1 sm:gap-2 sm:px-3">
-          <div className="flex flex-wrap items-end justify-center gap-1 sm:gap-2">
+        <div className="mobile-hand-tray flex min-h-36 items-end justify-center overflow-visible pb-2 px-1 sm:px-3">
+          <div className="grid w-full grid-cols-6 items-end gap-1 sm:gap-3">
           {phase === 'dealing' ? (
             <div className="flex items-end justify-center gap-1">
               {Array.from({ length: activePlayer?.hand.length ?? 0 }).map((_, index) => (
@@ -541,6 +541,7 @@ export function CardGame() {
                   card={card}
                   size="md"
                   mobileSize="sm"
+                  mobileGrid
                   fan={false}
                   disabled={resolving || !playable?.playableIds.has(card.id)}
                   onClick={() => handlePlayCard(card.id)}
@@ -549,7 +550,7 @@ export function CardGame() {
             ) : (
               // Bidding / trump: hand is view-only but fully legible.
               activePlayer.hand.map((card) => (
-                <div key={card.id} className="-ml-3 shrink-0 first:ml-0">
+                <div key={card.id} className="flex w-full justify-center">
                   <CardFace card={card} size="md" className="sm:h-32 sm:w-24 sm:text-sm" />
                 </div>
               ))
@@ -601,7 +602,7 @@ export function CardGame() {
 
         {/* Bidding controls */}
         {phase === 'bidding' && (
-          <div className="sticky bottom-2 z-30 mt-3 flex flex-wrap items-center justify-center gap-3 rounded-xl border border-border bg-secondary/95 px-2 pb-2 pt-3 shadow-xl backdrop-blur md:static md:rounded-none md:border-0 md:bg-transparent md:px-0 md:pb-0 md:shadow-none md:backdrop-blur-0">
+          <div className="mobile-bid-controls sticky bottom-2 z-30 mt-3 flex flex-wrap items-center justify-center gap-3 rounded-xl border border-border bg-secondary/95 px-2 pb-2 pt-3 shadow-xl backdrop-blur md:static md:rounded-none md:border-0 md:bg-transparent md:px-0 md:pb-0 md:shadow-none md:backdrop-blur-0">
             <div className="flex items-center gap-2 rounded-xl border border-border bg-background/40 px-2 py-1">
               <button
                 type="button"

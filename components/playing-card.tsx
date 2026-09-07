@@ -112,6 +112,7 @@ export function ClickableCard({
   card,
   size = 'lg',
   mobileSize,
+  mobileGrid = false,
   fan = true,
   disabled,
   selected,
@@ -120,6 +121,7 @@ export function ClickableCard({
   card: Card
   size?: Size
   mobileSize?: Size
+  mobileGrid?: boolean
   fan?: boolean
   disabled?: boolean
   selected?: boolean
@@ -146,6 +148,7 @@ export function ClickableCard({
         className={cn(
           !disabled && 'group-hover:ring-2 group-hover:ring-gold',
           mobileSize === 'sm' && 'h-16 w-11 sm:h-24 sm:w-16',
+          mobileGrid && 'w-full',
         )}
       />
     </button>
