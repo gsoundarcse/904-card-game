@@ -111,6 +111,7 @@ export function MysteryCard({
 export function ClickableCard({
   card,
   size = 'lg',
+  mobileSize,
   fan = true,
   disabled,
   selected,
@@ -118,6 +119,7 @@ export function ClickableCard({
 }: {
   card: Card
   size?: Size
+  mobileSize?: Size
   fan?: boolean
   disabled?: boolean
   selected?: boolean
@@ -138,7 +140,14 @@ export function ClickableCard({
         selected && '-translate-y-4',
       )}
     >
-      <CardFace card={card} size={size} className={cn(!disabled && 'group-hover:ring-2 group-hover:ring-gold')} />
+      <CardFace
+        card={card}
+        size={size}
+        className={cn(
+          !disabled && 'group-hover:ring-2 group-hover:ring-gold',
+          mobileSize === 'sm' && 'h-16 w-11 sm:h-24 sm:w-16',
+        )}
+      />
     </button>
   )
 }

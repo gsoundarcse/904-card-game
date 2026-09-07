@@ -463,6 +463,7 @@ export function CardGame() {
     <main className="mx-auto flex min-h-svh w-full max-w-5xl flex-col gap-4 px-3 py-4 sm:px-6 sm:py-6">
       <Scoreboard
         teamScores={teamScores}
+        targetPoints={players.length >= 6 ? 904 : 884}
         claimerName={claimer !== null ? players[claimer].name : null}
         claimerTeam={claimerTeam}
         claim={claim}
@@ -523,6 +524,7 @@ export function CardGame() {
                   key={card.id}
                   card={card}
                   size="md"
+                  mobileSize="sm"
                   fan={false}
                   disabled={resolving || !playable?.playableIds.has(card.id)}
                   onClick={() => handlePlayCard(card.id)}

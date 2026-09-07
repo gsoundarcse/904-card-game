@@ -5,6 +5,7 @@ import { SUIT_SYMBOL, type Suit, TEAM_NAME } from '@/lib/game'
 
 export function Scoreboard({
   teamScores,
+  targetPoints,
   claimerName,
   claimerTeam,
   claim,
@@ -14,6 +15,7 @@ export function Scoreboard({
   onReset,
 }: {
   teamScores: [number, number]
+  targetPoints: number
   claimerName: string | null
   claimerTeam: 0 | 1 | null
   claim: number
@@ -37,7 +39,12 @@ export function Scoreboard({
             <span className={cn('text-[10px] font-semibold uppercase tracking-widest', t === 0 ? 'text-team-a' : 'text-team-b')}>
               {TEAM_NAME[t]}
             </span>
-            <span className="font-serif text-3xl font-bold leading-none text-foreground">{teamScores[t]}</span>
+            <span className="font-serif text-3xl font-bold leading-none text-foreground">
+              {teamScores[t]}<span className="ml-1 font-mono text-xs font-normal text-muted-foreground">/ {targetPoints}</span>
+            </span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+              {targetPoints - teamScores[t]} pending
+            </span>
           </div>
         ))}
       </div>

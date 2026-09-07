@@ -133,10 +133,10 @@ export function GameTable({
 
       {/* trump indicator */}
       {showTrumpIndicator && (
-        <div className="absolute left-1/2 top-[24%] z-10 flex -translate-x-1/2 flex-col items-center gap-1 sm:top-[18%]">
+        <div className="absolute right-3 top-3 z-30 flex translate-x-0 flex-col items-center gap-1 sm:left-1/2 sm:right-auto sm:top-[18%] sm:-translate-x-1/2">
           <span className="font-mono text-[10px] uppercase tracking-widest text-gold">Trump</span>
           <div className="relative">
-            <MysteryCard size="md" revealed={trumpRevealed} card={trumpRevealed ? displayTrumpCard : null} />
+            <MysteryCard size="sm" revealed={trumpRevealed} card={trumpRevealed ? displayTrumpCard : null} />
             {trumpRevealed && (
               <button
                 type="button"
@@ -164,7 +164,7 @@ export function GameTable({
         ) : (
           trick.map((play) => (
             <div key={play.card.id} className="flex flex-col items-center gap-1.5">
-              <CardFace card={play.card} size="lg" />
+              <CardFace card={play.card} size="md" className="sm:h-32 sm:w-24 sm:text-sm" />
               <span className="max-w-28 truncate font-mono text-xs font-semibold text-foreground/80">
                 {seats[play.player].name}
               </span>

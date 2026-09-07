@@ -269,6 +269,7 @@ function Table({
                   key={card.id}
                   card={card}
                   size="md"
+                  mobileSize="sm"
                   fan={false}
                   disabled={pending || !yourTurn || !playable.has(card.id)}
                   onClick={() => send({ type: 'playCard', cardId: card.id })}

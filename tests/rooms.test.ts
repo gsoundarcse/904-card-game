@@ -450,6 +450,24 @@ describe('what each player is allowed to see', () => {
     }
   })
 
+  it('keeps the revealed trump distinct from the cards already in play', () => {
+    const t = toPlayingPhase(dealtTable(4))
+    const leader = t.room().round.current
+    const trumpId = t.room().round.trumpCard!.id
+    const asker = (leader + 2) % 4
+    rig(t, { [leader]: ['Spades-2'], [asker]: ['Hearts-3', 'Clubs-9'] }, leader)
+    t.room().round.trumpCard = buildDeck(4).find((card) => card.id === trumpId)!
+    t.room().round.trumpSuit = 'Hearts'
+
+    t.act(leader, { type: 'playCard', cardId: 'Spades-2' })
+    t.room().round.current = asker
+    t.act(asker, { type: 'askTrump' })
+
+    assert.equal(t.room().round.trick[0].card.id, 'Spades-2')
+    assert.equal(t.view(asker).round.trumpCard?.id, trumpId)
+    assert.notEqual(t.view(asker).round.trumpCard?.id, t.room().round.trick[0].card.id)
+  })
+
   it('refuses a view to someone not at the table', () => {
     const t = dealtTable(4)
     rejects(() => viewFor(t.room(), 'stranger'), /not seated/)
@@ -457,6 +475,32 @@ describe('what each player is allowed to see', () => {
 })
 
 describe('playing cards', () => {
+  it('decreases the visible hand count after each accepted play', () => {
+    const t = toPlayingPhase(dealtTable(4))
+    const seat = t.room().round.current
+    const cardId = t.view(seat).playableIds[0]
+    const before = t.view((seat + 1) % 4).players.find((player) => player.seat === seat)!.handCount
+
+    t.act(seat, { type: 'playCard', cardId })
+
+    const after = t.view((seat + 1) % 4).players.find((player) => player.seat === seat)!.handCount
+    assert.equal(before, 6)
+    assert.equal(after, 5)
+  })
+
+  it('keeps every played card in the current trick while the trick is incomplete', () => {
+    const t = toPlayingPhase(dealtTable(4))
+    const leader = t.room().round.current
+    const firstCard = t.view(leader).playableIds[0]
+
+    t.act(leader, { type: 'playCard', cardId: firstCard })
+
+    const view = t.view(t.room().round.current)
+    assert.equal(view.round.trick.length, 1)
+    assert.equal(view.round.trick[0].player, leader)
+    assert.equal(view.round.trick[0].card.id, firstCard)
+  })
+
   it('refuses a card the player does not hold', () => {
     const t = toPlayingPhase(dealtTable(4))
     const seat = t.room().round.current
