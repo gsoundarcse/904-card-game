@@ -6,6 +6,7 @@ import { useState } from 'react'
 const OPTIONS = [
   {
     game: '904',
+    enabled: true,
     count: 4,
     deck: '24-card deck',
     ranks: '2 · 3 · J · 9 · A · 10',
@@ -13,6 +14,7 @@ const OPTIONS = [
   },
   {
     game: 'Rani',
+    enabled: false,
     count: 6,
     deck: 'Coming soon',
     ranks: 'A new thinnai game',
@@ -38,16 +40,15 @@ export function ConfigMenu({ onStart }: { onStart: (count: number, names: string
       </header>
 
       <div className="grid w-full gap-5 sm:grid-cols-2">
-        {OPTIONS.map((opt) => (
+        {OPTIONS.filter((opt) => opt.enabled).map((opt) => (
           <button
             key={opt.count}
             type="button"
-            onClick={() => opt.game === '904' && setCount(opt.count)}
-            disabled={opt.game === 'Rani'}
+            onClick={() => setCount(opt.count)}
             className={cn(
               'group flex min-w-0 flex-col items-start gap-3 rounded-2xl border border-border bg-secondary/60 p-5 text-left sm:p-6',
-              opt.game === 'Rani' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
-              count === opt.count && opt.game === '904' && 'border-gold bg-secondary',
+              'cursor-pointer',
+              count === opt.count && 'border-gold bg-secondary',
               'transition-all hover:-translate-y-1 hover:border-gold hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
             )}
           >
@@ -57,11 +58,11 @@ export function ConfigMenu({ onStart }: { onStart: (count: number, names: string
                 {opt.deck}
               </span>
             </div>
-            <span className="text-lg font-semibold text-foreground">{opt.game === 'Rani' ? 'Coming soon' : 'Card game'}</span>
+            <span className="text-lg font-semibold text-foreground">Card game</span>
             <span className="break-words font-mono text-xs tracking-wide text-muted-foreground">{opt.ranks}</span>
             <span className="text-sm leading-relaxed text-muted-foreground">{opt.blurb}</span>
             <span className="mt-2 text-sm font-semibold text-gold transition-transform group-hover:translate-x-1">
-              {opt.game === 'Rani' ? 'Coming soon' : 'Set up 904 →'}
+              Set up 904 →
             </span>
           </button>
         ))}
