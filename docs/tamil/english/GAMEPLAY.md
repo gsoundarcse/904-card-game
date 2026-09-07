@@ -40,3 +40,11 @@
 - Failed claim: claiming team pays 2 under 700, 3 at 700+.
 - Ordinary failed shortfall below half adds 1.
 - Correct Double adds 1; wrong Double replaces settlement with 3 or 4 cards.
+
+## Scoreboard targets
+
+- The claiming team needs `claim` points to make the claim.
+- The defending team needs `total deck points - claim + 1` points to stop the claim.
+- On a 904-point table, a 500 claim means defenders need 405 points.
+- On a 904-point table, a 900 claim means defenders need 5 points.
+- The UI must show captured points and the correct team-specific points needed.

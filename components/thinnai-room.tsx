@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { CLAIM_STEP, MAX_CLAIM, SUIT_SYMBOL, SUITS, type Suit, teamLabel, teamOf } from '@/lib/game'
+import { CLAIM_STEP, MAX_CLAIM, SUIT_SYMBOL, SUITS, type Suit, teamLabel, teamOf, defendingTarget } from '@/lib/game'
 import type { Action, PlayerView } from '@/lib/server/rooms'
 import { type Credentials, useThinnai } from '@/lib/client/use-thinnai'
 import { GameTable, type SeatView } from '@/components/game-table'
@@ -46,7 +46,10 @@ export function ThinnaiRoom({ roomId, creds }: { roomId: string; creds: Credenti
 // ---------------------------------------------------------------------------
 
 function MatchHeader({ view }: { view: PlayerView }) {
-  const { match, seatCount } = view
+  const { match, round, seatCount } = view
+  const claimTarget = round.claim
+  const claimerTeam = round.claimer === null ? null : teamOf(round.claimer)
+  const totalPoints = seatCount >= 6 ? 904 : 884
   return (
     <div className="flex flex-wrap items-stretch justify-between gap-3">
       <div className="flex items-center gap-3">
@@ -62,8 +65,12 @@ function MatchHeader({ view }: { view: PlayerView }) {
               {teamLabel(t, seatCount)}
             </span>
             <span className="font-serif text-3xl font-bold leading-none text-foreground">
-              {match.teamCards[t]}
-              <span className="ml-1 font-mono text-xs font-normal text-muted-foreground">/ {match.cardLimit}</span>
+              {round.teamScores[t]}<span className="ml-1 font-mono text-xs font-normal text-muted-foreground">/ {claimTarget || '—'}</span>
+            </span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+              {claimTarget
+                ? `${Math.max(0, (t === claimerTeam ? claimTarget : defendingTarget(totalPoints, claimTarget)) - round.teamScores[t])} needed`
+                : 'claim pending'}
             </span>
           </div>
         ))}

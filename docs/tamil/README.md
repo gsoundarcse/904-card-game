@@ -7,3 +7,5 @@ Choose a language:
 
 Both versions cover product scope, gameplay, UI, local bots, online privacy,
 deployment, surrender, and test acceptance requirements.
+
+Operational monitoring: [Monitoring guide](../MONITORING.md).

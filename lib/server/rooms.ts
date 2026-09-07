@@ -18,6 +18,7 @@ import {
   type TrickPlay,
   trickPoints,
 } from '@/lib/game'
+import { recordMetric } from '@/lib/server/telemetry'
 
 // ---------------------------------------------------------------------------
 // Room state
@@ -176,6 +177,7 @@ export function createRoom(seatCount: number, hostName: string) {
     round: emptyRound(seatCount),
   }
   ROOMS.set(id, room)
+  recordMetric('roomsCreated', { seatCount })
   return { room, player: host }
 }
 
@@ -206,6 +208,7 @@ export function joinRoom(id: string, name: string) {
   }
   room.players.push(player)
   room.version++
+  recordMetric('roomsJoined', { seatCount: room.seatCount })
   return { room, player }
 }
 
@@ -231,6 +234,7 @@ function dealRound(room: Room, dealer: number) {
   round.current = (dealer + 1) % room.seatCount
   room.round = round
   room.status = 'bidding'
+  recordMetric('roundsStarted', { seatCount: room.seatCount })
 }
 
 // ---------------------------------------------------------------------------
@@ -251,33 +255,39 @@ export function applyAction(id: string, playerId: string, secret: string, action
   if (!room) throw new ActionError('That thinnai does not exist')
   const player = authenticate(room, playerId, secret)
 
-  switch (action.type) {
-    case 'start':
-      doStart(room, player)
-      break
-    case 'bid':
-      doBid(room, player, action.amount)
-      break
-    case 'pass':
-      doPass(room, player)
-      break
-    case 'selectTrump':
-      doSelectTrump(room, player, action.cardId)
-      break
-    case 'askTrump':
-      doAskTrump(room, player)
-      break
-    case 'playCard':
-      doPlayCard(room, player, action.cardId, action.double === true)
-      break
-    case 'nextRound':
-      doNextRound(room, player)
-      break
-    default:
-      throw new ActionError('Unknown action')
+  try {
+    switch (action.type) {
+      case 'start':
+        doStart(room, player)
+        break
+      case 'bid':
+        doBid(room, player, action.amount)
+        break
+      case 'pass':
+        doPass(room, player)
+        break
+      case 'selectTrump':
+        doSelectTrump(room, player, action.cardId)
+        break
+      case 'askTrump':
+        doAskTrump(room, player)
+        break
+      case 'playCard':
+        doPlayCard(room, player, action.cardId, action.double === true)
+        break
+      case 'nextRound':
+        doNextRound(room, player)
+        break
+      default:
+        throw new ActionError('Unknown action')
+    }
+  } catch (error) {
+    recordMetric('actionsRejected', { action: action.type, reason: error instanceof Error ? error.message : 'unknown' })
+    throw error
   }
 
   room.version++
+  recordMetric('actionsAccepted', { action: action.type })
   return room
 }
 
@@ -442,6 +452,7 @@ function resolveTrick(room: Room) {
   if (r.trickNumber < CARDS_PER_PLAYER) return
 
   // Round over — settle.
+  recordMetric('roundsCompleted', { seatCount: room.seatCount })
   const claimerTeam = teamOf(r.claimer ?? 0)
   const settlement = settleRound({
     claim: r.claim,

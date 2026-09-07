@@ -204,6 +204,11 @@ export function trickPoints(trick: TrickPlay[]): number {
   return trick.reduce((sum, p) => sum + p.card.points, 0)
 }
 
+/** Points the defending team must capture to make the claimer miss their bid. */
+export function defendingTarget(totalPoints: number, claim: number): number {
+  return Math.max(0, totalPoints - claim + 1)
+}
+
 // ---------------------------------------------------------------------------
 // Match settlement
 //

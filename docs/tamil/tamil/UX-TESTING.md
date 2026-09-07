@@ -13,6 +13,9 @@ Mobile-ல், குறிப்பாக iPhone 15 Plus மற்றும் 
 - Board horizontal overflow இல்லை.
 - Scoreboard captured / claim / needed காட்ட வேண்டும்.
 - Buttons finger-friendly ஆக இருக்க வேண்டும்.
+- ஒரே page scroll பயன்படுத்த வேண்டும்; nested horizontal hand scroll வேண்டாம்.
+- Landscape-ல் Claim மற்றும் Pass controls 6-card hand-ஐ cover செய்யக்கூடாது.
+- Mobile-ல் Claim மற்றும் Pass தெரிந்தாலும் cards மறையக்கூடாது.
 
 Trump picker-ல் 6 உண்மையான cards மட்டும்; category symbols வேண்டாம்; 2 clicks மட்டும்.
 
@@ -41,6 +44,15 @@ overwrite செய்யக்கூடாது.
 - First 5 trick sweep பிறகே Double.
 - Trump elsewhere இருக்கும் போது மட்டும் surrender; score settlement இல்லை.
 - Bot win, teammate support, legal card, full random round.
+- Claimer needed = claim; defender needed = total - claim + 1.
+- Claim 500-க்கு defender 405; claim 900-க்கு defender 5.
+
+## Monitoring acceptance
+
+- `/api/health` uptime, room/action/round/error counters தர வேண்டும்.
+- `MONITORING_TOKEN` இருந்தால் health endpoint பாதுகாக்கப்பட வேண்டும்.
+- Server logs structured JSON ஆகவும் hands, secrets, hidden card ids இல்லாமலும் இருக்க வேண்டும்.
+- Client errors `/api/telemetry` மூலம் secrets/card data இல்லாமல் report ஆக வேண்டும்.
 
 ## Release checks
 

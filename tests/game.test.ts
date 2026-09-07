@@ -6,6 +6,7 @@ import {
   CARDS_PER_PLAYER,
   cardLimit,
   chooseBotCard,
+  defendingTarget,
   type Card,
   evaluateTrick,
   getPlayable,
@@ -302,6 +303,16 @@ describe('chooseBotCard', () => {
       1,
     )
     assert.equal(chosen?.id, 'Spades-8')
+  })
+})
+
+describe('defendingTarget', () => {
+  it('requires 405 points to stop a 500 claim on a 904-point table', () => {
+    assert.equal(defendingTarget(904, 500), 405)
+  })
+
+  it('requires 5 points to stop a 900 claim on a 904-point table', () => {
+    assert.equal(defendingTarget(904, 900), 5)
   })
 })
 

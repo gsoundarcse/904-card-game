@@ -13,6 +13,9 @@ On mobile, including iPhone 15 Plus and smaller phones:
 - No horizontal board overflow.
 - Scoreboard wraps and shows captured / claim / points needed.
 - Buttons remain tappable.
+- Use one page scroll; do not create nested horizontal hand scrolling.
+- In landscape, Claim and Pass controls must not cover the six-card hand.
+- Claim and Pass remain visible on mobile without hiding cards.
 
 Trump picker shows all six actual cards, no category-symbol panel, and takes two clicks.
 
@@ -42,6 +45,15 @@ poll responses.
 - Double only after five-trick sweep.
 - Surrender only while trump remains elsewhere; no score settlement.
 - Bot win, teammate support, legal-card safety, and full random-round legality.
+- Claimer needed points equal claim; defender needed points equal total - claim + 1.
+- Verify 500 claim shows defender target 405 and 900 claim shows defender target 5.
+
+## Monitoring acceptance
+
+- `/api/health` reports uptime and room/action/round/error counters.
+- `MONITORING_TOKEN` protects the health endpoint when configured.
+- Server events are structured JSON and contain no hands, secrets, or hidden card ids.
+- Client errors are sent to `/api/telemetry` without game secrets or card data.
 
 ## Release checks
 

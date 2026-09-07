@@ -1,13 +1,14 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { SUIT_SYMBOL, type Suit, TEAM_NAME } from '@/lib/game'
+import { defendingTarget, SUIT_SYMBOL, type Suit, TEAM_NAME } from '@/lib/game'
 
 export function Scoreboard({
   teamScores,
   claimTarget,
-  claimerName,
   claimerTeam,
+  claimerName,
+  totalPoints,
   claim,
   trumpSuit,
   trumpRevealed,
@@ -18,6 +19,7 @@ export function Scoreboard({
   claimTarget: number
   claimerName: string | null
   claimerTeam: 0 | 1 | null
+  totalPoints: number
   claim: number
   trumpSuit: Suit | null
   trumpRevealed: boolean
@@ -43,7 +45,9 @@ export function Scoreboard({
               {teamScores[t]}<span className="ml-1 font-mono text-xs font-normal text-muted-foreground">/ {claimTarget || '—'}</span>
             </span>
             <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-              {claimTarget ? `${Math.max(0, claimTarget - teamScores[t])} needed` : 'claim pending'}
+              {claimTarget
+                ? `${Math.max(0, (t === claimerTeam ? claimTarget : defendingTarget(totalPoints, claimTarget)) - teamScores[t])} needed`
+                : 'claim pending'}
             </span>
           </div>
         ))}

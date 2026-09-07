@@ -472,6 +472,7 @@ export function CardGame() {
       <Scoreboard
         teamScores={teamScores}
         claimTarget={claim}
+        totalPoints={players.length >= 6 ? 904 : 884}
         claimerName={claimer !== null ? players[claimer].name : null}
         claimerTeam={claimerTeam}
         claim={claim}

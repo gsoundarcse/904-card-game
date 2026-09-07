@@ -39,3 +39,11 @@
 - Failed claim: claiming team 2 அல்லது 3 cards.
 - Ordinary failed shortfall below half: +1.
 - Correct Double: +1; wrong Double: 3 அல்லது 4 cards replacement.
+
+## Scoreboard இலக்குகள்
+
+- Claiming team-க்கு claim points தேவை.
+- Defending team-க்கு `மொத்த deck points - claim + 1` points தேவை; இதுவே claim-ஐ fail செய்யும் இலக்கு.
+- 904-point table-ல் claim 500 என்றால் defenders-க்கு 405 points தேவை.
+- Claim 900 என்றால் defenders-க்கு 5 points தேவை.
+- UI-ல் ஒவ்வொரு team-க்கும் captured points மற்றும் சரியான points needed காட்ட வேண்டும்.
