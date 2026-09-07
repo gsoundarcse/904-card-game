@@ -20,8 +20,9 @@ const OPTIONS = [
   },
 ] as const
 
-export function ConfigMenu({ onStart }: { onStart: (count: number, names: string[]) => void }) {
+export function ConfigMenu({ onStart }: { onStart: (count: number, names: string[], solo: boolean) => void }) {
   const [count, setCount] = useState(4)
+  const [solo, setSolo] = useState(false)
   const [names, setNames] = useState(['Player 1', 'Player 2', 'Player 3', 'Player 4', 'Player 5', 'Player 6'])
 
   return (
@@ -69,7 +70,7 @@ export function ConfigMenu({ onStart }: { onStart: (count: number, names: string
       <section className="w-full rounded-2xl border border-border bg-secondary/40 p-5">
         <h2 className="font-serif text-xl font-bold text-gold-soft">Player names</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {names.slice(0, count).map((name, index) => (
+          {names.slice(0, solo ? 1 : count).map((name, index) => (
             <label key={index} className="flex items-center gap-3">
               <span className="w-16 font-mono text-xs uppercase tracking-widest text-muted-foreground">P{index + 1}</span>
               <input
@@ -82,9 +83,13 @@ export function ConfigMenu({ onStart }: { onStart: (count: number, names: string
             </label>
           ))}
         </div>
+        <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-team-b/40 bg-team-b/10 px-3 py-3 text-sm text-foreground">
+          <input type="checkbox" checked={solo} onChange={(event) => setSolo(event.target.checked)} className="h-4 w-4 accent-[var(--gold)]" />
+          <span>Play solo against 3 bots</span>
+        </label>
         <button
           type="button"
-          onClick={() => onStart(count, names.slice(0, count).map((name, index) => name.trim() || `Player ${index + 1}`))}
+          onClick={() => onStart(count, names.slice(0, solo ? 1 : count).map((name, index) => name.trim() || `Player ${index + 1}`), solo)}
           className="mt-5 w-full rounded-xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5"
         >
           Deal the cards

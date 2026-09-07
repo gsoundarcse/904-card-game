@@ -31,6 +31,7 @@ type Phase = 'config' | 'dealing' | 'bidding' | 'trump' | 'playing' | 'roundOver
 interface Player {
   name: string
   hand: Card[]
+  isBot: boolean
 }
 
 const PHASE_LABEL: Record<Phase, string> = {
@@ -88,11 +89,12 @@ export function CardGame() {
     bannerTimer.current = setTimeout(() => setBanner(null), ms)
   }, [])
 
-  const startGame = useCallback((count: number, names: string[]) => {
+  const startGame = useCallback((count: number, names: string[], solo = false) => {
     const deck = shuffle(buildDeck(count))
     const dealt: Player[] = Array.from({ length: count }, (_, i) => ({
-      name: names[i] ?? `Player ${i + 1}`,
+      name: solo && i > 0 ? `Bot ${i}` : names[i] ?? `Player ${i + 1}`,
       hand: sortHand(deck.slice(i * CARDS_PER_PLAYER, i * CARDS_PER_PLAYER + CARDS_PER_PLAYER)),
+      isBot: solo && i > 0,
     }))
     const deal = Math.floor(Math.random() * count)
     setPlayers(dealt.map((player) => ({ ...player, hand: [] })))
@@ -124,6 +126,12 @@ export function CardGame() {
     setPhase('dealing')
   }, [])
 
+  const botDelay = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (botDelay.current) clearTimeout(botDelay.current)
+  }, [])
+
   useEffect(() => {
     if (phase !== 'dealing' || !dealPlan) return
     if (dealBatch >= 2) {
@@ -152,6 +160,7 @@ export function CardGame() {
     const dealt: Player[] = Array.from({ length: n }, (_, i) => ({
       name: names[i] ?? `Player ${i + 1}`,
       hand: sortHand(deck.slice(i * CARDS_PER_PLAYER, i * CARDS_PER_PLAYER + CARDS_PER_PLAYER)),
+      isBot: players[i]?.isBot ?? false,
     }))
     const deal = Math.floor(Math.random() * n)
     setPlayers(dealt)
@@ -243,6 +252,15 @@ export function CardGame() {
     [phase, current, passed, bids, advanceBidding],
   )
 
+  useEffect(() => {
+    if (phase !== 'bidding' || !players[current]?.isBot) return
+    botDelay.current = setTimeout(() => {
+      if (highBid === 0) handleClaim(MIN_CLAIM)
+      else handlePass()
+    }, 700)
+    return () => { if (botDelay.current) clearTimeout(botDelay.current) }
+  }, [phase, current, players, highBid, handleClaim, handlePass])
+
   const handleSelectTrump = useCallback(
     (cardId: string) => {
       if (claimer === null) return
@@ -266,6 +284,12 @@ export function CardGame() {
     },
     [claimer, n, players],
   )
+
+  useEffect(() => {
+    if (phase !== 'trump' || claimer === null || !players[claimer]?.isBot) return
+    botDelay.current = setTimeout(() => handleSelectTrump(players[claimer].hand[0]?.id ?? ''), 700)
+    return () => { if (botDelay.current) clearTimeout(botDelay.current) }
+  }, [phase, claimer, players, handleSelectTrump])
 
   /** Put the face-down card back in the claimer's hand. */
   const returnTrumpCard = useCallback(() => {
@@ -358,6 +382,19 @@ export function CardGame() {
     },
     [phase, resolving, playable, players, current, trick, n, resolveTrick, claimer, trumpCard, returnTrumpCard, doubleCalled, teamTricks],
   )
+
+  useEffect(() => {
+    if (phase !== 'playing' || resolving || !players[current]?.isBot || !playable) return
+    botDelay.current = setTimeout(() => {
+      if (playable.canAskTrump) {
+        handleAskTrump()
+        return
+      }
+      const cardId = Array.from(playable.playableIds)[0]
+      if (cardId) handlePlayCard(cardId)
+    }, 700)
+    return () => { if (botDelay.current) clearTimeout(botDelay.current) }
+  }, [phase, resolving, current, players, playable, handleAskTrump, handlePlayCard])
 
   useEffect(() => () => { if (bannerTimer.current) clearTimeout(bannerTimer.current) }, [])
 
