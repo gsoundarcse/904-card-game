@@ -32,7 +32,7 @@ const OPTIONS = [
 
 export function ConfigMenu({ onStart }: { onStart: (count: number, names: string[], solo: boolean) => void }) {
   const [count, setCount] = useState(4)
-  const [solo, setSolo] = useState(false)
+  const [solo, setSolo] = useState(true)
   const [names, setNames] = useState(['Player 1', 'Player 2', 'Player 3', 'Player 4', 'Player 5', 'Player 6'])
 
   return (

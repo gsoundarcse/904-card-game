@@ -160,7 +160,7 @@ export function GameTable({
 
       {/* trump indicator */}
       {showTrumpIndicator && (
-        <div className="fixed right-3 top-3 z-50 flex translate-x-0 flex-col items-center gap-1 rounded-xl border border-gold/40 bg-felt-dark/95 p-1 shadow-xl sm:absolute sm:left-1/2 sm:right-auto sm:top-[18%] sm:z-30 sm:-translate-x-1/2 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+        <div className="fixed right-3 top-3 z-50 flex translate-x-0 flex-col items-center gap-1 rounded-xl border border-gold/40 bg-felt-dark/95 p-1 shadow-xl sm:absolute sm:left-1/2 sm:right-auto sm:top-[29%] sm:z-30 sm:-translate-x-1/2 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
           <span className="font-mono text-[10px] uppercase tracking-widest text-gold">Trump</span>
           <div className="relative">
             <MysteryCard size="sm" revealed={trumpRevealed} card={trumpRevealed ? displayTrumpCard : null} />

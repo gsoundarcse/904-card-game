@@ -270,7 +270,7 @@ function Table({
         </div>
 
         <div className="mobile-hand-tray flex min-h-36 items-end justify-center overflow-visible pb-2 px-1 sm:px-3">
-          <div className="grid w-full grid-cols-6 items-end gap-1 sm:gap-3">
+          <div className="grid w-full grid-cols-6 items-end gap-1 sm:flex sm:w-auto sm:gap-3">
           {view.yourHand.length ? (
             view.yourHand.map((card) =>
               view.status === 'playing' ? (
@@ -279,7 +279,7 @@ function Table({
                   card={card}
                   size="lg"
                   mobileSize="sm"
-                  mobileGrid
+                  mobileGrid={false}
                   fan={false}
                   disabled={pending || !yourTurn || !playable.has(card.id)}
                   onClick={() => send({ type: 'playCard', cardId: card.id })}

@@ -538,7 +538,7 @@ export function CardGame() {
 
         {/* Hand */}
         <div className="mobile-hand-tray flex min-h-28 items-end justify-center overflow-visible pb-2 px-1 sm:min-h-36 sm:px-3">
-          <div className="grid w-full grid-cols-6 items-end gap-1 sm:gap-3">
+          <div className="grid w-full grid-cols-6 items-end gap-1 sm:flex sm:w-auto sm:gap-3">
           {phase === 'dealing' ? (
             <div className="flex items-end justify-center gap-1">
               {Array.from({ length: activePlayer?.hand.length ?? 0 }).map((_, index) => (
@@ -560,7 +560,7 @@ export function CardGame() {
                   card={card}
                   size="lg"
                   mobileSize="sm"
-                  mobileGrid
+                  mobileGrid={false}
                   fan={false}
                   disabled={resolving || !playable?.playableIds.has(card.id)}
                   onClick={() => handlePlayCard(card.id)}
