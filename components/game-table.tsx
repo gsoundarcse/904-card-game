@@ -136,6 +136,7 @@ export function GameTable({
   const displayTrumpCard: Card | null = trumpCard ?? (trumpSuit ? { id: 'trump', suit: trumpSuit, rank: 'A', points: 0 } : null)
   const showTrump = trumpPlaced ?? trumpSuit !== null
   const showTrumpIndicator = showTrump && (!trumpRevealed || !trumpDismissed)
+  const sixSeatTable = seats.length === 6
 
   useEffect(() => {
     if (!trumpRevealed) setTrumpDismissed(false)
@@ -151,7 +152,10 @@ export function GameTable({
   }, [completedTrick, trick])
 
   return (
-    <div className="relative mx-auto h-[380px] w-full max-w-4xl overflow-hidden rounded-3xl border border-team-b/30 bg-[linear-gradient(145deg,var(--felt-dark),var(--felt)_48%,var(--felt-dark))] shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:h-[560px]">
+    <div className={cn(
+      'game-table relative mx-auto h-[380px] w-full max-w-4xl overflow-hidden rounded-3xl border border-team-b/30 bg-[linear-gradient(145deg,var(--felt-dark),var(--felt)_48%,var(--felt-dark))] shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:h-[560px]',
+      sixSeatTable && 'six-seat-table',
+    )}>
       {/* felt surface */}
       <div className="absolute inset-3 rounded-2xl border border-gold/30 bg-[radial-gradient(ellipse_at_center,var(--felt)_0%,var(--felt-dark)_100%)] shadow-[inset_0_0_70px_rgba(0,0,0,0.4)] sm:inset-5 sm:rounded-3xl">
         <div className="absolute inset-3 rounded-xl border border-team-b/25 sm:inset-5 sm:rounded-2xl" />
@@ -160,7 +164,7 @@ export function GameTable({
 
       {/* trump indicator */}
       {showTrumpIndicator && (
-        <div className="fixed right-3 top-3 z-50 flex translate-x-0 flex-col items-center gap-1 rounded-xl border border-gold/40 bg-felt-dark/95 p-1 shadow-xl sm:absolute sm:left-1/2 sm:right-auto sm:top-[29%] sm:z-30 sm:-translate-x-1/2 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+        <div className="fixed right-3 top-3 z-50 flex translate-x-0 flex-col items-center gap-1 rounded-xl border border-gold/40 bg-felt-dark/95 p-1 shadow-xl sm:absolute sm:left-auto sm:right-[8%] sm:top-[8%] sm:z-30 sm:translate-x-0 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
           <span className="font-mono text-[10px] uppercase tracking-widest text-gold">Trump</span>
           <div className="relative">
             <MysteryCard size="sm" revealed={trumpRevealed} card={trumpRevealed ? displayTrumpCard : null} />

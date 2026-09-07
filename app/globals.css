@@ -137,6 +137,10 @@
     margin-bottom: -0.5rem;
   }
 
+  .six-seat-table {
+    height: 230px;
+  }
+
   .game-table-seat {
     left: var(--seat-mobile-left);
     top: var(--seat-mobile-top);
@@ -160,6 +164,11 @@
 
   .game-table {
     height: 460px;
+  }
+
+  .six-seat-table {
+    height: 540px;
+    max-width: 78rem;
   }
 }
 
