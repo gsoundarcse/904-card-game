@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { saveCredentials } from '@/lib/client/use-thinnai'
 
@@ -47,6 +48,9 @@ export default function CreateThinnaiPage() {
         <p className="mx-auto mt-4 max-w-sm text-pretty text-sm leading-relaxed text-muted-foreground">
           Open a thinnai, send the link to your people, and play 904 from wherever you each are.
         </p>
+        <Link href="/results" className="mt-3 inline-block font-mono text-[11px] text-muted-foreground hover:text-gold">
+          See results & leaderboard
+        </Link>
       </header>
 
       <div className="w-full rounded-2xl border border-border bg-secondary/50 p-6">

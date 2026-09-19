@@ -29,28 +29,32 @@ export function Scoreboard({
   return (
     <div className="scoreboard flex flex-wrap items-stretch justify-between gap-3">
       <div className="flex items-center gap-3">
-        {([0, 1] as const).map((t) => (
-          <div
-            key={t}
-            className={cn(
-              'team-score-card flex min-w-20 flex-col rounded-lg border px-2.5 py-1.5 shadow-md',
-              t === 0 ? 'border-team-a/50 bg-team-a/10' : 'border-team-b/50 bg-team-b/10',
-              claimerTeam === t && 'ring-2 ring-gold',
-            )}
-          >
-            <span className={cn('text-xs font-bold uppercase tracking-widest sm:text-sm', t === 0 ? 'text-team-a' : 'text-team-b')}>
-              {TEAM_NAME[t]}
-            </span>
-            <span className="font-serif text-3xl font-bold leading-none text-foreground">
-              {teamScores[t]}<span className="ml-1 font-mono text-[10px] font-normal text-muted-foreground">/ {claimTarget || '—'}</span>
-            </span>
-            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-              {claimTarget
-                ? `${Math.max(0, (t === claimerTeam ? claimTarget : defendingTarget(totalPoints, claimTarget)) - teamScores[t])} needed`
-                : 'claim pending'}
-            </span>
-          </div>
-        ))}
+        {([0, 1] as const).map((t) => {
+          const isClaimer = t === claimerTeam
+          // Each team's own win target: the claimer must reach the claim,
+          // the other team just needs enough to defeat it.
+          const target = claimTarget ? (isClaimer ? claimTarget : defendingTarget(totalPoints, claimTarget)) : null
+          return (
+            <div
+              key={t}
+              className={cn(
+                'team-score-card flex min-w-20 flex-col rounded-lg border px-2.5 py-1.5 shadow-md',
+                t === 0 ? 'border-team-a/50 bg-team-a/10' : 'border-team-b/50 bg-team-b/10',
+                claimerTeam === t && 'ring-2 ring-gold',
+              )}
+            >
+              <span className={cn('text-xs font-bold uppercase tracking-widest sm:text-sm', t === 0 ? 'text-team-a' : 'text-team-b')}>
+                {TEAM_NAME[t]}
+              </span>
+              <span className="font-serif text-3xl font-bold leading-none text-foreground">
+                {teamScores[t]}<span className="ml-1 font-mono text-[10px] font-normal text-muted-foreground">/ {target ?? '—'}</span>
+              </span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                {!claimTarget || isClaimer ? 'claim pending' : `${Math.max(0, target! - teamScores[t])} needed to defeat the claim`}
+              </span>
+            </div>
+          )
+        })}
       </div>
 
       <div className="flex flex-1 flex-wrap items-center justify-end gap-3">

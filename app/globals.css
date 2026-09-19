@@ -250,16 +250,22 @@
   }
 }
 
-@media (max-width: 767px) and (orientation: landscape) {
-  .mobile-hand-tray {
-    min-height: 4.5rem;
-    padding-bottom: 0.25rem;
-  }
-
+@media (max-width: 767px) {
+  /* Sticky-to-viewport-bottom only makes sense once the page is taller than
+     the screen. On shorter phones (or portrait, with six cards + controls)
+     the reserved flow position sits below the fold, so "sticky" yanks the
+     panel up over the hand tray above it. Keep it in normal flow instead. */
   .mobile-bid-controls {
     position: static;
     margin-top: 0.5rem;
     padding-top: 0.5rem;
     box-shadow: none;
+  }
+}
+
+@media (max-width: 767px) and (orientation: landscape) {
+  .mobile-hand-tray {
+    min-height: 4.5rem;
+    padding-bottom: 0.25rem;
   }
 }

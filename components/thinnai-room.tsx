@@ -608,12 +608,20 @@ function RoundSummary({
         </div>
 
         {matchOver ? (
-          <a
-            href="/thinnai"
-            className="mt-6 block w-full rounded-xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground"
-          >
-            Open a new thinnai
-          </a>
+          <div className="mt-6 flex flex-col gap-3">
+            <a
+              href="/results"
+              className="block w-full rounded-xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground"
+            >
+              See results
+            </a>
+            <a
+              href="/thinnai"
+              className="block w-full rounded-xl border border-border px-6 py-3 text-sm font-bold uppercase tracking-wide text-foreground"
+            >
+              Open a new thinnai
+            </a>
+          </div>
         ) : view.youAreHost ? (
           <button
             type="button"

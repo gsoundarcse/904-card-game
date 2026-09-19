@@ -47,6 +47,36 @@ export function ConfigMenu({ onStart }: { onStart: (count: number, names: string
         </p>
       </header>
 
+      <label className="flex w-full max-w-md cursor-pointer items-center gap-3 rounded-xl border border-team-b/40 bg-team-b/10 px-3 py-3 text-sm text-foreground">
+        <input type="checkbox" checked={solo} onChange={(event) => setSolo(event.target.checked)} className="h-4 w-4 accent-[var(--gold)]" />
+        <span>Play solo against 3 bots</span>
+      </label>
+
+      <section className="w-full rounded-2xl border border-border bg-secondary/40 p-5">
+        <h2 className="font-serif text-xl font-bold text-gold-soft">Player names</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {names.slice(0, solo ? 1 : count).map((name, index) => (
+            <label key={index} className="flex items-center gap-3">
+              <span className="w-16 font-mono text-xs uppercase tracking-widest text-muted-foreground">P{index + 1}</span>
+              <input
+                value={name}
+                maxLength={20}
+                onChange={(event) => setNames((current) => current.map((item, i) => (i === index ? event.target.value : item)))}
+                className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
+                placeholder={`Player ${index + 1}`}
+              />
+            </label>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => onStart(count, names.slice(0, solo ? 1 : count).map((name, index) => name.trim() || `Player ${index + 1}`), solo)}
+          className="mt-5 w-full rounded-xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5"
+        >
+          Play with bots
+        </button>
+      </section>
+
       <div className="grid w-full gap-5 sm:grid-cols-2">
         {OPTIONS.filter((opt) => opt.enabled).map((opt) => (
           <button
@@ -75,35 +105,6 @@ export function ConfigMenu({ onStart }: { onStart: (count: number, names: string
           </button>
         ))}
       </div>
-
-      <section className="w-full rounded-2xl border border-border bg-secondary/40 p-5">
-        <h2 className="font-serif text-xl font-bold text-gold-soft">Player names</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {names.slice(0, solo ? 1 : count).map((name, index) => (
-            <label key={index} className="flex items-center gap-3">
-              <span className="w-16 font-mono text-xs uppercase tracking-widest text-muted-foreground">P{index + 1}</span>
-              <input
-                value={name}
-                maxLength={20}
-                onChange={(event) => setNames((current) => current.map((item, i) => (i === index ? event.target.value : item)))}
-                className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
-                placeholder={`Player ${index + 1}`}
-              />
-            </label>
-          ))}
-        </div>
-        <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-team-b/40 bg-team-b/10 px-3 py-3 text-sm text-foreground">
-          <input type="checkbox" checked={solo} onChange={(event) => setSolo(event.target.checked)} className="h-4 w-4 accent-[var(--gold)]" />
-          <span>Play solo against 3 bots</span>
-        </label>
-        <button
-          type="button"
-          onClick={() => onStart(count, names.slice(0, solo ? 1 : count).map((name, index) => name.trim() || `Player ${index + 1}`), solo)}
-          className="mt-5 w-full rounded-xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5"
-        >
-          Deal the cards
-        </button>
-      </section>
 
       <a
         href="/thinnai"

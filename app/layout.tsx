@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Geist, Cinzel } from 'next/font/google'
+import { auth, signOut } from '@/auth'
 import './globals.css'
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
@@ -35,17 +36,59 @@ export const viewport: Viewport = {
   themeColor: '#1f4436',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const session = await auth()
   return (
     <html lang="en" className={`${geist.variable} ${cinzel.variable} bg-background`}>
       <body className="font-sans antialiased">
+        <AuthBar userName={session?.user?.name ?? null} />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
+  )
+}
+
+function AuthBar({ userName }: { userName: string | null }) {
+  return (
+    <div className="relative z-40 flex items-center justify-end gap-2 border-b border-border/60 bg-background px-3 py-1.5 font-mono text-[11px]">
+      {userName ? (
+        <>
+          <span className="hidden text-muted-foreground sm:inline">{userName}</span>
+          <form
+            action={async () => {
+              'use server'
+              await signOut({ redirectTo: '/' })
+            }}
+          >
+            <button
+              type="submit"
+              className="rounded-full border border-border bg-background/60 px-3 py-1 text-muted-foreground transition-colors hover:border-gold hover:text-gold"
+            >
+              Log out
+            </button>
+          </form>
+        </>
+      ) : (
+        <>
+          <a
+            href="/login"
+            className="rounded-full border border-border bg-background/60 px-3 py-1 text-muted-foreground transition-colors hover:border-gold hover:text-gold"
+          >
+            Log in
+          </a>
+          <a
+            href="/register"
+            className="rounded-full border border-gold/50 bg-background/60 px-3 py-1 text-gold transition-colors hover:bg-gold/10"
+          >
+            Sign up
+          </a>
+        </>
+      )}
+    </div>
   )
 }

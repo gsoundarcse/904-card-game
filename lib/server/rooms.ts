@@ -19,6 +19,7 @@ import {
   trickPoints,
 } from '@/lib/game'
 import { recordMetric } from '@/lib/server/telemetry'
+import { recordMatch } from '@/lib/server/match-history'
 
 // ---------------------------------------------------------------------------
 // Room state
@@ -38,6 +39,8 @@ export interface RoomPlayer {
   name: string
   seat: number
   lastSeen: number
+  /** Set when the player was logged in at create/join time — lets results be tracked against their account. */
+  userId?: string
 }
 
 export interface CompletedTrick {
@@ -150,7 +153,7 @@ function emptyRound(seatCount: number): Room['round'] {
   }
 }
 
-export function createRoom(seatCount: number, hostName: string) {
+export function createRoom(seatCount: number, hostName: string, hostUserId?: string) {
   sweep()
   if (seatCount !== 4 && seatCount !== 6) throw new ActionError('Table size must be 4 or 6')
 
@@ -163,6 +166,7 @@ export function createRoom(seatCount: number, hostName: string) {
     name: cleanName(hostName),
     seat: 0,
     lastSeen: Date.now(),
+    userId: hostUserId,
   }
 
   const room: Room = {
@@ -193,7 +197,7 @@ function cleanName(raw: string): string {
   return name
 }
 
-export function joinRoom(id: string, name: string) {
+export function joinRoom(id: string, name: string, userId?: string) {
   const room = ROOMS.get(id)
   if (!room) throw new ActionError('That thinnai does not exist')
   if (room.status !== 'lobby') throw new ActionError('That match has already started')
@@ -205,6 +209,7 @@ export function joinRoom(id: string, name: string) {
     name: cleanName(name),
     seat: room.players.length,
     lastSeen: Date.now(),
+    userId,
   }
   room.players.push(player)
   room.version++
@@ -469,6 +474,7 @@ function resolveTrick(room: Room) {
   if (room.match.teamCards[settlement.penalisedTeam] >= room.match.cardLimit) {
     room.match.loser = settlement.penalisedTeam
     room.status = 'matchOver'
+    recordMatch(room)
   } else {
     room.status = 'roundOver'
   }

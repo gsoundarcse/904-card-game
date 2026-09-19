@@ -55,20 +55,15 @@ function Seat({ seat }: { seat: SeatView }) {
 
       <div className="flex h-8 items-center justify-center">
         {seat.handCount > 0 ? (
-          <div className="flex min-w-0 items-center gap-1.5">
-            <div className="flex h-9 items-center sm:h-10">
-              {[0, 1, 2].map((slot) => (
-                <CardBack
-                  key={slot}
-                  size="sm"
-                  showLabel={false}
-                  className={cn('h-9 w-5 sm:h-10 sm:w-6', slot > 0 && '-ml-2.5 sm:-ml-3')}
-                />
-              ))}
-            </div>
-            <span className="whitespace-nowrap font-mono text-[10px] font-semibold text-muted-foreground sm:text-xs">
-              {seat.handCount} {seat.handCount === 1 ? 'card' : 'cards'}
-            </span>
+          <div className="flex min-w-0 items-center">
+            {Array.from({ length: seat.handCount }).map((_, slot) => (
+              <CardBack
+                key={slot}
+                size="sm"
+                showLabel={false}
+                className={cn('h-9 w-5 sm:h-10 sm:w-6', slot > 0 && '-ml-4 sm:-ml-5')}
+              />
+            ))}
           </div>
         ) : (
           <span className="font-mono text-[10px] text-muted-foreground">empty</span>
