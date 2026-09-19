@@ -25,6 +25,7 @@ import {
   sortHand,
   settleRound,
   SOLO_CLAIM,
+  suggestTrumpCard,
   SUIT_SYMBOL,
   type Suit,
   teamOf,
@@ -81,7 +82,6 @@ export function CardGame() {
   const [trumpCard, setTrumpCard] = useState<Card | null>(null)
   const [revealedTrumpCard, setRevealedTrumpCard] = useState<Card | null>(null)
   const [trumpRevealed, setTrumpRevealed] = useState(false)
-  const [trumpHidden, setTrumpHidden] = useState(false) // claimer temporarily peeking
 
   // play
   const [trick, setTrick] = useState<TrickPlay[]>([])
@@ -129,7 +129,6 @@ export function CardGame() {
     setTrumpCard(null)
     setRevealedTrumpCard(null)
     setTrumpRevealed(false)
-    setTrumpHidden(false)
     setTrick([])
     setLastTrick([])
     setTrickNumber(0)
@@ -199,7 +198,6 @@ export function CardGame() {
     setTrumpCard(null)
     setRevealedTrumpCard(null)
     setTrumpRevealed(false)
-    setTrumpHidden(false)
     setTrick([])
     setLastTrick([])
     setTrickNumber(0)
@@ -308,7 +306,6 @@ export function CardGame() {
       setTrumpCard(card)
       setRevealedTrumpCard(null)
       setTrumpSuit(card.suit)
-      setTrumpHidden(false)
       setTrumpRevealed(false)
       setTrick([])
       setLastTrick([])
@@ -726,8 +723,6 @@ export function CardGame() {
           claimerName={players[claimer].name}
           claim={claim}
           hand={players[claimer].hand}
-          hidden={trumpHidden}
-          onPeek={() => setTrumpHidden((h) => !h)}
           onSelect={handleSelectTrump}
         />
       )}
@@ -803,56 +798,52 @@ function TrumpModal({
   claimerName,
   claim,
   hand,
-  hidden,
-  onPeek,
   onSelect,
 }: {
   claimerName: string
   claim: number
   hand: Card[]
-  hidden: boolean
-  onPeek: () => void
   onSelect: (cardId: string) => void
 }) {
+  const suggested = suggestTrumpCard(hand)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <div className="max-h-[92svh] w-full max-w-lg overflow-y-auto rounded-2xl border-2 border-gold/50 bg-popover p-6 text-center shadow-2xl">
-        <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">Secure Prompt</p>
-        <h2 className="mt-2 font-serif text-3xl font-bold text-gold-soft">{claimerName} sets the trump</h2>
+        <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">{claimerName} sets the trump</p>
         <p className="mt-1 text-sm text-muted-foreground">
           Target <span className="font-semibold text-gold">{claim}</span>. Lay one card face down — its suit is trump,
           and you cannot play that card until trump is asked for.
         </p>
 
-        {!hidden ? (
-          <button
-            type="button"
-            onClick={onPeek}
-            className="mt-6 w-full rounded-xl border border-gold/50 bg-felt-dark px-4 py-6 font-serif text-xl font-bold text-gold transition-colors hover:bg-felt"
-          >
-            Tap to open (make sure others look away)
-          </button>
-        ) : (
-          <>
-            <div className="mt-5 rounded-xl border border-border bg-background/40 p-3">
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Tap a card to lay it face down
-              </p>
-              <div className="grid grid-cols-2 justify-items-center gap-3 pb-1 sm:grid-cols-3">
-                {hand.map((card) => (
-                  <ClickableCard
-                    key={card.id}
-                    card={card}
-                    size="md"
-                    fan={false}
-                    onClick={() => onSelect(card.id)}
-                  />
-                ))}
+        <div className="mt-5 rounded-xl border border-border bg-background/40 p-3">
+          <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Tap a card to lay it face down
+          </p>
+          {suggested && (
+            <p className="mb-3 font-mono text-[10px] text-gold">
+              Suggested: your weakest {suggested.suit} card — you hold the most of that suit, so trump favours you.
+            </p>
+          )}
+          <div className="flex flex-nowrap items-end justify-center gap-1.5 overflow-x-auto pb-1 sm:gap-3">
+            {hand.map((card) => (
+              <div key={card.id} className="flex flex-col items-center gap-1">
+                {suggested?.id === card.id && (
+                  <span className="rounded-full bg-gold px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-primary-foreground">
+                    Suggested
+                  </span>
+                )}
+                <ClickableCard
+                  card={card}
+                  size="md"
+                  mobileSize="sm"
+                  mobileGrid={false}
+                  fan={false}
+                  onClick={() => onSelect(card.id)}
+                />
               </div>
-            </div>
-
-          </>
-        )}
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )

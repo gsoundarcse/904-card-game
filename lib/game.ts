@@ -141,6 +141,31 @@ export function nextActiveSeat(from: number, playerCount: number, claimer: numbe
   return next
 }
 
+/**
+ * Which card to lay face down as trump: pick the suit you hold the most of
+ * (so trump favours your own long suit once revealed), then give up the
+ * least valuable card in it — lowest points, weakest rank as a tiebreak.
+ */
+export function suggestTrumpCard(hand: Card[]): Card | null {
+  if (hand.length === 0) return null
+  const bySuit = new Map<Suit, Card[]>()
+  for (const card of hand) bySuit.set(card.suit, [...(bySuit.get(card.suit) ?? []), card])
+
+  let longestSuit = hand[0].suit
+  let longestCount = 0
+  for (const [suit, cards] of bySuit) {
+    if (cards.length > longestCount) {
+      longestCount = cards.length
+      longestSuit = suit
+    }
+  }
+
+  return bySuit.get(longestSuit)!.reduce((worst, card) => {
+    if (card.points !== worst.points) return card.points < worst.points ? card : worst
+    return rankStrength(card.rank) > rankStrength(worst.rank) ? card : worst
+  })
+}
+
 export function sortHand(hand: Card[]): Card[] {
   const ordered = [...hand].sort((a, b) => {
     if (a.suit !== b.suit) return HAND_SUIT_ORDER.indexOf(a.suit) - HAND_SUIT_ORDER.indexOf(b.suit)
