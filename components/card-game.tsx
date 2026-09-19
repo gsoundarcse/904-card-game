@@ -37,6 +37,7 @@ import { Scoreboard } from '@/components/scoreboard'
 import { GameTable, type SeatView } from '@/components/game-table'
 import { CardBack, CardFace, ClickableCard } from '@/components/playing-card'
 import { StrongSupport } from '@/components/strong-support'
+import { Ribbons } from '@/components/ribbons'
 
 type Phase = 'config' | 'dealing' | 'bidding' | 'trump' | 'playing' | 'roundOver'
 
@@ -882,13 +883,20 @@ function RoundOver({
 }) {
   const loser = matchCards.findIndex((cards) => cards >= lossLimit) as 0 | 1 | -1
   const matchOver = loser !== -1
+  const winner = matchOver ? ((1 - loser) as 0 | 1) : null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+      {matchOver && <Ribbons />}
       <div className="w-full max-w-md rounded-2xl border-2 border-gold/50 bg-popover p-8 text-center shadow-2xl">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">{matchOver ? 'Match Over' : 'Round Over'}</p>
         <h2 className={cn('mt-2 font-serif text-4xl font-bold', success ? 'text-gold-soft' : 'text-destructive')}>
           {matchOver ? `${TEAM_NAME[loser]} loses` : success ? 'Claim Made!' : 'Claim Failed'}
         </h2>
+        {matchOver && winner !== null && (
+          <p className={cn('mt-1 font-serif text-lg font-bold', winner === 0 ? 'text-team-a' : 'text-team-b')}>
+            {TEAM_NAME[winner]} wins the match! 🎉
+          </p>
+        )}
         <p className="mt-3 text-sm text-muted-foreground">
           {claimerName} ({TEAM_NAME[claimerTeam]}) claimed <span className="font-semibold text-gold">{claim}</span>
           {isSoloClaim(claim) ? ' solo' : ''} and

@@ -30,7 +30,13 @@ function seatPosition(index: number, total: number) {
   } as React.CSSProperties
 }
 
-function Seat({ seat }: { seat: SeatView }) {
+/** Degrees from the pile's center to a seat, for the "who played this" arrow — 0deg points right, 90deg points down. */
+function seatAngleDeg(index: number, total: number) {
+  const angle = (Math.PI / 2) + (index / total) * Math.PI * 2
+  return (angle * 180) / Math.PI
+}
+
+function Seat({ seat, highlighted = false }: { seat: SeatView; highlighted?: boolean }) {
   return (
     <div
       className={cn(
@@ -40,6 +46,7 @@ function Seat({ seat }: { seat: SeatView }) {
           : seat.team === 0
             ? 'border-team-a/40'
             : 'border-team-b/50',
+        highlighted && 'ring-4 ring-gold shadow-[0_0_20px_var(--gold)]',
       )}
     >
       <div className="flex items-center gap-1.5">
@@ -128,6 +135,7 @@ export function GameTable({
 }) {
   const [trumpDismissed, setTrumpDismissed] = useState(false)
   const [completedVisible, setCompletedVisible] = useState(true)
+  const [pointedPlayer, setPointedPlayer] = useState<number | null>(null)
   const displayTrumpCard: Card | null = trumpCard ?? (trumpSuit ? { id: 'trump', suit: trumpSuit, rank: 'A', points: 0 } : null)
   const showTrump = trumpPlaced ?? trumpSuit !== null
   const showTrumpIndicator = showTrump && (!trumpRevealed || !trumpDismissed)
@@ -189,14 +197,47 @@ export function GameTable({
             {banner ? '' : 'The pile is empty'}
           </span>
         ) : (
-          trick.map((play) => (
-            <div key={play.card.id} className="flex flex-col items-center gap-1.5">
-              <CardFace card={play.card} size="lg" className="h-24 w-16 sm:h-32 sm:w-24" />
-              <span className="max-w-28 truncate font-mono text-xs font-semibold text-foreground/80">
-                {seats[play.player].name}
-              </span>
-            </div>
-          ))
+          trick.map((play) => {
+            const played = seats[play.player]
+            const pointed = pointedPlayer === play.player
+            return (
+              <div
+                key={play.card.id}
+                className="flex cursor-pointer flex-col items-center gap-1"
+                onMouseEnter={() => setPointedPlayer(play.player)}
+                onMouseLeave={() => setPointedPlayer((current) => (current === play.player ? null : current))}
+                onClick={() => setPointedPlayer((current) => (current === play.player ? null : play.player))}
+              >
+                <span
+                  className={cn(
+                    'whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-widest',
+                    played.team === 0 ? 'bg-team-a/20 text-team-a' : 'bg-team-b/20 text-team-b',
+                  )}
+                >
+                  {TEAM_NAME[played.team]}
+                </span>
+                <div className="relative">
+                  <CardFace card={play.card} size="lg" className="h-24 w-16 sm:h-32 sm:w-24" />
+                  {pointed && (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="pointer-events-none absolute left-1/2 top-1/2 z-30 h-6 w-6 text-gold drop-shadow-[0_0_4px_rgba(0,0,0,0.6)]"
+                      style={{
+                        transform: `translate(-50%, -50%) rotate(${seatAngleDeg(play.player, seats.length)}deg) translate(28px, 0)`,
+                      }}
+                      aria-hidden
+                    >
+                      <path d="M2 12l18-8-6 8 6 8z" />
+                    </svg>
+                  )}
+                </div>
+                <span className="max-w-28 truncate font-mono text-xs font-semibold text-foreground/80">
+                  {played.name}
+                </span>
+              </div>
+            )
+          })
         )}
       </div>
 
@@ -217,7 +258,7 @@ export function GameTable({
           className={cn('game-table-seat absolute z-20', sixSeatTable && 'six-seat-station', hideBottomSeat && i === 0 && 'hidden')}
           style={seatPosition(i, seats.length)}
         >
-          <Seat seat={seat} />
+          <Seat seat={seat} highlighted={pointedPlayer === i} />
         </div>
       ))}
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { Ribbons } from '@/components/ribbons'
 import { CLAIM_STEP, MAX_CLAIM, SUIT_SYMBOL, SUITS, type Suit, teamLabel, teamOf, defendingTarget } from '@/lib/game'
 import type { Action, PlayerView } from '@/lib/server/rooms'
 import { type Credentials, useThinnai } from '@/lib/client/use-thinnai'
@@ -566,6 +567,7 @@ function RoundSummary({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+      {matchOver && <Ribbons />}
       <div className="max-h-[92svh] w-full max-w-md overflow-y-auto rounded-2xl border-2 border-gold/50 bg-popover p-8 text-center shadow-2xl">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">
           {matchOver ? 'Match over' : `Round ${view.match.roundNumber}`}
@@ -582,6 +584,11 @@ function RoundSummary({
               ? 'Claim made'
               : 'Claim failed'}
         </h2>
+        {matchOver && (
+          <p className="mt-1 font-serif text-lg font-bold text-gold">
+            {teamLabel((1 - (view.match.loser ?? 0)) as 0 | 1, view.seatCount)} wins the match! 🎉
+          </p>
+        )}
 
         <ul className="mt-4 space-y-1 text-sm text-muted-foreground">
           {s.reasons.map((reason) => (
