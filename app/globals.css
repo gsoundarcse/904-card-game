@@ -226,8 +226,8 @@
 
   .four-seat-table .game-table-seat[data-seat-index='2'] {
     left: 50%;
-    top: 18%;
-    transform: scale(0.6);
+    top: 26%;
+    transform: scale(0.55);
   }
 
   .four-seat-table .game-table-seat[data-seat-index='3'] {
