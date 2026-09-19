@@ -55,8 +55,39 @@ export function rankStrength(rank: Rank): number {
 
 export const CARDS_PER_PLAYER = 6
 export const MIN_CLAIM = 500
-export const MAX_CLAIM = 903
+/** Top of the normal step-of-10 bidding ladder. */
+export const LADDER_MAX_CLAIM = 900
+/** The solo claim: the claimer alone must take every trick, partner sits out. */
+export const SOLO_CLAIM = 904
+export const MAX_CLAIM = SOLO_CLAIM
 export const CLAIM_STEP = 10
+
+export function isSoloClaim(claim: number): boolean {
+  return claim === SOLO_CLAIM
+}
+
+/** A legal claim is either the solo 904 or a step-of-10 amount on the normal ladder. */
+export function isValidClaimAmount(amount: number): boolean {
+  return isSoloClaim(amount) || (amount >= MIN_CLAIM && amount <= LADDER_MAX_CLAIM && amount % CLAIM_STEP === 0)
+}
+
+/** Smallest amount that legally out-bids `highBid` — 900 jumps straight to the 904 solo claim. */
+export function minNextClaim(highBid: number): number {
+  if (highBid <= 0) return MIN_CLAIM
+  if (highBid >= LADDER_MAX_CLAIM) return SOLO_CLAIM
+  return highBid + CLAIM_STEP
+}
+
+/** One step up from `amount`, jumping 900 straight to 904 since nothing lies between. */
+export function incrementClaim(amount: number): number {
+  if (amount >= LADDER_MAX_CLAIM && amount < SOLO_CLAIM) return SOLO_CLAIM
+  return Math.min(SOLO_CLAIM, amount + CLAIM_STEP)
+}
+
+/** One step down from `amount`, jumping 904 back to 900. */
+export function decrementClaim(amount: number): number {
+  return amount === SOLO_CLAIM ? LADDER_MAX_CLAIM : amount - CLAIM_STEP
+}
 
 export function buildDeck(playerCount: number): Card[] {
   const ranks = playerCount >= 6 ? RANKS_6 : RANKS_4
@@ -84,6 +115,31 @@ export function teamOf(seat: number): 0 | 1 {
 }
 
 export const TEAM_NAME = ['Team A', 'Team B'] as const
+
+/**
+ * Seats that actually take a turn this round. In a 904 solo claim the
+ * claimer's teammates sit out entirely — only the claimer represents the team.
+ */
+export function activeSeats(playerCount: number, claimer: number, solo: boolean): number[] {
+  if (!solo) return Array.from({ length: playerCount }, (_, i) => i)
+  const claimerTeam = teamOf(claimer)
+  const seats: number[] = []
+  for (let seat = 0; seat < playerCount; seat++) {
+    if (seat === claimer || teamOf(seat) !== claimerTeam) seats.push(seat)
+  }
+  return seats
+}
+
+/** Next seat to act, skipping the claimer's idle teammates during a solo claim. */
+export function nextActiveSeat(from: number, playerCount: number, claimer: number, solo: boolean): number {
+  let next = (from + 1) % playerCount
+  if (!solo) return next
+  const claimerTeam = teamOf(claimer)
+  while (next !== claimer && teamOf(next) === claimerTeam) {
+    next = (next + 1) % playerCount
+  }
+  return next
+}
 
 export function sortHand(hand: Card[]): Card[] {
   const ordered = [...hand].sort((a, b) => {
@@ -134,6 +190,7 @@ export function getPlayable(
   hand: Card[],
   trick: TrickPlay[],
   trumpRevealed: boolean,
+  hasTrump = true,
 ): PlayableResult {
   // Leading the trick: any card is allowed.
   if (trick.length === 0) {
@@ -148,8 +205,9 @@ export function getPlayable(
     return { playableIds: new Set(ledCards.map((c) => c.id)), canAskTrump: false, reason: 'follow' }
   }
 
-  // Void in the led suit: free choice, plus the option to ask for trump.
-  return { playableIds: new Set(hand.map((c) => c.id)), canAskTrump: !trumpRevealed, reason: 'void' }
+  // Void in the led suit: free choice, plus the option to ask for trump (a
+  // solo 904 claim has no trump card at all, so `hasTrump` is false there).
+  return { playableIds: new Set(hand.map((c) => c.id)), canAskTrump: hasTrump && !trumpRevealed, reason: 'void' }
 }
 
 /** Returns the seat index that wins the completed trick. */
@@ -230,6 +288,10 @@ export const WRONG_DOUBLE_CARDS = { small: 3, big: 4 } as const
 export const DOUBLE_BONUS = 1
 /** Added when a failed claimer could not capture half their claim. */
 export const SHORTFALL_BONUS = 1
+/** Cards for a 904 solo claim made — paid by the opponents. */
+export const SOLO_WIN_CARDS = 4
+/** Cards for a 904 solo claim missed — paid by the claiming team. */
+export const SOLO_LOSS_CARDS = 5
 
 /** Cards a team must accumulate to lose the match. */
 export function cardLimit(playerCount: number): number {
@@ -287,9 +349,29 @@ export function settleRound({
   doubleCalled,
 }: SettleInput): Settlement {
   const opponents = (1 - claimerTeam) as 0 | 1
-  const big = claim >= BIG_BID
   const totalTricks = teamTricks[0] + teamTricks[1]
   const swept = totalTricks > 0 && teamTricks[claimerTeam] === totalTricks
+
+  // A 904 claim is solo: the claimer alone must take every trick. Win/loss
+  // hinge purely on sweeping, at a flat, harsher rate than any normal claim.
+  if (isSoloClaim(claim)) {
+    if (swept) {
+      return {
+        success: true,
+        penalisedTeam: opponents,
+        cards: SOLO_WIN_CARDS,
+        reasons: [`Solo claim of ${SOLO_CLAIM} made alone, every trick taken — ${SOLO_WIN_CARDS} cards`],
+      }
+    }
+    return {
+      success: false,
+      penalisedTeam: claimerTeam,
+      cards: SOLO_LOSS_CARDS,
+      reasons: [`Solo claim of ${SOLO_CLAIM} missed a trick — ${SOLO_LOSS_CARDS} cards`],
+    }
+  }
+
+  const big = claim >= BIG_BID
 
   if (doubleCalled) {
     if (swept) {

@@ -131,6 +131,15 @@
   animation: deal-card 420ms ease-out both;
 }
 
+/* zero-size anchor: left/top mark the exact visual center, so child scale never shifts it */
+.game-table-seat {
+  display: flex;
+  width: 0;
+  height: 0;
+  align-items: center;
+  justify-content: center;
+}
+
 @media (max-width: 767px) {
   .scoreboard {
     gap: 0.4rem;
@@ -151,17 +160,16 @@
   }
 
   .game-table {
-    height: 300px;
+    height: 260px;
     margin-bottom: 0;
   }
 
   .four-seat-table {
-    height: 320px;
+    height: 260px;
   }
 
   .four-seat-table .game-table-seat {
-    transform: scale(0.68);
-    transform-origin: center;
+    transform: scale(0.65);
   }
 
   /* seat 0 is the human player, hidden on the pass-and-play mobile table */
@@ -170,24 +178,24 @@
   }
 
   .four-seat-table .game-table-seat[data-seat-index='1'] {
-    left: 14%;
-    top: 58%;
+    left: 15%;
+    top: 65%;
   }
 
   .four-seat-table .game-table-seat[data-seat-index='2'] {
     left: 50%;
     top: 18%;
-    transform: scale(0.64);
+    transform: scale(0.6);
   }
 
   .four-seat-table .game-table-seat[data-seat-index='3'] {
-    left: 86%;
-    top: 58%;
+    left: 85%;
+    top: 65%;
   }
 
   .four-seat-table .central-pile {
-    top: 58%;
-    max-width: 50%;
+    top: 65%;
+    max-width: 46%;
   }
 
   .six-seat-table {
@@ -195,8 +203,7 @@
   }
 
   .six-seat-table .six-seat-station {
-    transform: translate(-50%, -50%) scale(0.52);
-    transform-origin: center;
+    transform: scale(0.52);
   }
 
   .six-seat-table .six-seat-station:nth-last-child(3) {

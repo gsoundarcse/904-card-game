@@ -3,19 +3,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
+  activeSeats,
   buildDeck,
   CARDS_PER_PLAYER,
   CLAIM_STEP,
   cardLimit,
   chooseBotCard,
   type Card,
+  decrementClaim,
   evaluateTrick,
   getPlayable,
+  incrementClaim,
+  isSoloClaim,
+  isValidClaimAmount,
+  LADDER_MAX_CLAIM,
   MAX_CLAIM,
   MIN_CLAIM,
+  minNextClaim,
+  nextActiveSeat,
   shuffle,
   sortHand,
   settleRound,
+  SOLO_CLAIM,
   SUIT_SYMBOL,
   type Suit,
   teamOf,
@@ -81,6 +90,7 @@ export function CardGame() {
   const [matchCards, setMatchCards] = useState<[number, number]>([0, 0])
   const [teamTricks, setTeamTricks] = useState<[number, number]>([0, 0])
   const [doubleCalled, setDoubleCalled] = useState(false)
+  const [roundSuccess, setRoundSuccess] = useState(false)
   const [banner, setBanner] = useState<string | null>(null)
   const [resolving, setResolving] = useState(false)
 
@@ -204,12 +214,25 @@ export function CardGame() {
   // Keep pending bid at the minimum legal amount when the active bidder changes.
   useEffect(() => {
     if (phase !== 'bidding') return
-    setPendingBid(Math.min(MAX_CLAIM, highBid > 0 ? highBid + CLAIM_STEP : MIN_CLAIM))
+    setPendingBid(minNextClaim(highBid))
   }, [phase, current, highBid])
 
   const finalizeClaimer = useCallback((seat: number, amount: number) => {
     setClaimer(seat)
     setClaim(amount)
+    if (isSoloClaim(amount)) {
+      // 904: no trump this round, and the claimer leads the very first trick alone.
+      setTrumpSuit(null)
+      setTrumpCard(null)
+      setRevealedTrumpCard(null)
+      setTrumpRevealed(false)
+      setTrick([])
+      setLastTrick([])
+      setTrickNumber(0)
+      setCurrent(seat)
+      setPhase('playing')
+      return
+    }
     setPhase('trump')
   }, [])
 
@@ -310,18 +333,23 @@ export function CardGame() {
     setTrumpCard(null)
   }, [claimer, trumpCard])
 
-  // When entering play, set the leader = player to the right of the claimer.
+  // A 904 claim is solo — the claimer leads first and plays alone against the
+  // opponents; their teammates never get a turn.
+  const solo = claimer !== null && isSoloClaim(claim)
+
+  // When entering play, set the leader = player to the right of the claimer
+  // (or the claimer themselves, for a solo 904 claim).
   useEffect(() => {
     if (phase === 'playing' && claimer !== null && trickNumber === 0 && trick.length === 0) {
-      setCurrent((claimer - 1 + n) % n)
+      setCurrent(solo ? claimer : (claimer - 1 + n) % n)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
   const playable = useMemo(() => {
     if (phase !== 'playing' || !players[current]) return null
-    return getPlayable(players[current].hand, trick, trumpRevealed)
-  }, [phase, players, current, trick, trumpRevealed])
+    return getPlayable(players[current].hand, trick, trumpRevealed, !solo)
+  }, [phase, players, current, trick, trumpRevealed, solo])
 
   // Asking for trump is the player's choice, never automatic. It reveals the
   // suit to everyone and does not oblige the asker to then play a trump.
@@ -371,6 +399,7 @@ export function CardGame() {
           updated[settlement.penalisedTeam] += settlement.cards
           return updated
         })
+        setRoundSuccess(settlement.success)
         setPhase('roundOver')
       }
     },
@@ -400,14 +429,15 @@ export function CardGame() {
       const newTrick = [...trick, { player: current, card }]
       setTrick(newTrick)
 
-      if (newTrick.length === n) {
+      const seatsThisTrick = activeSeats(n, claimer ?? 0, solo).length
+      if (newTrick.length === seatsThisTrick) {
         setResolving(true)
         setTimeout(() => resolveTrick(newTrick), 1300)
       } else {
-        setCurrent((current + 1) % n)
+        setCurrent(nextActiveSeat(current, n, claimer ?? 0, solo))
       }
     },
-    [phase, resolving, playable, players, current, trick, n, resolveTrick, claimer, trumpCard, returnTrumpCard, doubleCalled, teamTricks],
+    [phase, resolving, playable, players, current, trick, n, resolveTrick, claimer, trumpCard, returnTrumpCard, doubleCalled, teamTricks, solo],
   )
 
   useEffect(() => {
@@ -444,6 +474,8 @@ export function CardGame() {
           else if (bids[i] != null) status = `Bid ${bids[i]}`
           else if (i === current) status = 'Deciding'
           else status = 'Waiting'
+        } else if (phase === 'playing' && solo && claimer !== null && i !== claimer && teamOf(i) === teamOf(claimer)) {
+          status = 'Sitting Out'
         } else if (phase === 'playing' && i === current && !resolving) {
           status = 'Turn'
         }
@@ -457,7 +489,7 @@ export function CardGame() {
           status,
         }
       }),
-    [players, phase, passed, bids, current, resolving, claimer, shuffler],
+    [players, phase, passed, bids, current, resolving, claimer, shuffler, solo],
   )
 
   if (phase === 'config') {
@@ -469,22 +501,19 @@ export function CardGame() {
   }
 
   const activePlayer = players[current]
-  const minAllowed = Math.min(MAX_CLAIM, highBid > 0 ? highBid + CLAIM_STEP : MIN_CLAIM)
-  const canClaim =
-    Number.isInteger(pendingBid) &&
-    pendingBid >= minAllowed &&
-    pendingBid <= MAX_CLAIM &&
-    pendingBid % CLAIM_STEP === 0
+  const minAllowed = minNextClaim(highBid)
+  const canClaim = Number.isInteger(pendingBid) && pendingBid >= minAllowed && isValidClaimAmount(pendingBid)
   const claimError = canClaim
     ? null
     : pendingBid > MAX_CLAIM
       ? `Maximum claim is ${MAX_CLAIM}.`
       : pendingBid < minAllowed
         ? `Claim must be at least ${minAllowed}.`
-        : `Claim must be a whole number in steps of ${CLAIM_STEP}.`
+        : `Claim must be a whole number in steps of ${CLAIM_STEP}, or exactly ${SOLO_CLAIM} to go solo.`
   const bidsLeft = phase === 'bidding' ? n - bidTurn : 0
   const canCallDouble =
     phase === 'playing' &&
+    !solo &&
     current === claimer &&
     activePlayer?.hand.length === 1 &&
     !trumpCard &&
@@ -610,11 +639,13 @@ export function CardGame() {
               </button>
             )}
             <p className="w-full text-center font-mono text-[11px] text-muted-foreground">
-              {trumpRevealed
-                ? 'Trump is out — it beats the led suit.'
-                : playable?.canAskTrump
-                  ? 'You are void. Play any card, or turn the trump over first.'
-                  : 'Trump is still face down.'}
+              {solo
+                ? `Solo claim of ${SOLO_CLAIM} \u2014 ${players[claimer as number]?.name} must take every trick alone.`
+                : trumpRevealed
+                  ? 'Trump is out — it beats the led suit.'
+                  : playable?.canAskTrump
+                    ? 'You are void. Play any card, or turn the trump over first.'
+                    : 'Trump is still face down.'}
             </p>
           </div>
         )}
@@ -625,7 +656,7 @@ export function CardGame() {
             <div className="flex items-center gap-2 rounded-xl border border-border bg-background/40 px-2 py-1">
               <button
                 type="button"
-                onClick={() => setPendingBid((v) => Math.max(minAllowed, v - CLAIM_STEP))}
+                onClick={() => setPendingBid((v) => Math.max(minAllowed, decrementClaim(v)))}
                 disabled={pendingBid <= minAllowed}
                 className="h-8 w-8 rounded-lg bg-secondary text-lg font-bold text-foreground disabled:opacity-30"
                 aria-label="Decrease bid"
@@ -651,7 +682,7 @@ export function CardGame() {
               />
               <button
                 type="button"
-                onClick={() => setPendingBid((v) => Math.min(MAX_CLAIM, v + CLAIM_STEP))}
+                onClick={() => setPendingBid((v) => Math.min(MAX_CLAIM, incrementClaim(v)))}
                 disabled={pendingBid >= MAX_CLAIM}
                 className="h-8 w-8 rounded-lg bg-secondary text-lg font-bold text-foreground disabled:opacity-30"
                 aria-label="Increase bid"
@@ -665,7 +696,7 @@ export function CardGame() {
               disabled={!canClaim}
               className="rounded-xl bg-gold px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40"
             >
-              Claim {pendingBid}
+              {isSoloClaim(pendingBid) ? 'Claim it all — 904 solo' : `Claim ${pendingBid}`}
             </button>
             <button
               type="button"
@@ -676,8 +707,10 @@ export function CardGame() {
             </button>
             <p className="w-full text-center font-mono text-[11px] text-muted-foreground">
               {highBid > 0
-                ? `High bid ${highBid} by ${players[highBidder as number].name}. Yours must be +${CLAIM_STEP} or more.`
-                : `Opening claim starts at ${MIN_CLAIM}. Max ${MAX_CLAIM}.`}
+                ? highBid >= LADDER_MAX_CLAIM
+                  ? `High bid ${highBid} by ${players[highBidder as number].name}. Only ${SOLO_CLAIM} — the solo claim — can beat it.`
+                  : `High bid ${highBid} by ${players[highBidder as number].name}. Yours must be +${CLAIM_STEP} or more.`
+                : `Opening claim starts at ${MIN_CLAIM}. Max ${MAX_CLAIM} — claim ${SOLO_CLAIM} to go it alone.`}
             </p>
             {!canClaim && <p className="w-full text-center font-mono text-[11px] text-destructive">{claimError}</p>}
             <p className="w-full text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
@@ -704,6 +737,7 @@ export function CardGame() {
           claimerTeam={claimerTeam}
           claim={claim}
           captured={teamScores[claimerTeam]}
+          success={roundSuccess}
           teamScores={teamScores}
           matchCards={matchCards}
           cardLimit={cardLimit(n)}
@@ -828,6 +862,7 @@ function RoundOver({
   claimerTeam,
   claim,
   captured,
+  success,
   teamScores,
   matchCards,
   cardLimit: lossLimit,
@@ -838,13 +873,13 @@ function RoundOver({
   claimerTeam: 0 | 1
   claim: number
   captured: number
+  success: boolean
   teamScores: [number, number]
   matchCards: [number, number]
   cardLimit: number
   onNextRound: () => void
   onPlayAgain: () => void
 }) {
-  const success = captured >= claim
   const loser = matchCards.findIndex((cards) => cards >= lossLimit) as 0 | 1 | -1
   const matchOver = loser !== -1
   return (
@@ -855,7 +890,8 @@ function RoundOver({
           {matchOver ? `${TEAM_NAME[loser]} loses` : success ? 'Claim Made!' : 'Claim Failed'}
         </h2>
         <p className="mt-3 text-sm text-muted-foreground">
-          {claimerName} ({TEAM_NAME[claimerTeam]}) claimed <span className="font-semibold text-gold">{claim}</span> and
+          {claimerName} ({TEAM_NAME[claimerTeam]}) claimed <span className="font-semibold text-gold">{claim}</span>
+          {isSoloClaim(claim) ? ' solo' : ''} and
           captured <span className={cn('font-semibold', success ? 'text-gold' : 'text-destructive')}>{captured}</span>.
         </p>
         <div className="mt-5 flex justify-center gap-4">

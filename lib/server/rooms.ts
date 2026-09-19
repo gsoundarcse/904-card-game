@@ -6,7 +6,7 @@ import {
   type Card,
   evaluateTrick,
   getPlayable,
-  MAX_CLAIM,
+  LADDER_MAX_CLAIM,
   MIN_CLAIM,
   type Settlement,
   settleRound,
@@ -300,9 +300,11 @@ function doStart(room: Room, player: RoomPlayer) {
   dealRound(room, Math.floor(Math.random() * room.seatCount))
 }
 
+// Online rooms don't yet implement the 904 solo claim (partner sitting out,
+// no trump, etc.) so the bidding ladder stops at its normal ceiling here.
 function minAllowed(room: Room): number {
   const { highBid } = room.round
-  return Math.min(MAX_CLAIM, highBid > 0 ? highBid + CLAIM_STEP : MIN_CLAIM)
+  return Math.min(LADDER_MAX_CLAIM, highBid > 0 ? highBid + CLAIM_STEP : MIN_CLAIM)
 }
 
 /** One lap only: when every seat has acted, the high bid takes the claim. */
@@ -329,7 +331,7 @@ function doBid(room: Room, player: RoomPlayer, amount: number) {
   if (room.status !== 'bidding') throw new ActionError('Not bidding')
   requireTurn(room, player)
   if (!Number.isInteger(amount)) throw new ActionError('Bid must be a whole number')
-  if (amount > MAX_CLAIM) throw new ActionError(`Maximum bid is ${MAX_CLAIM}`)
+  if (amount > LADDER_MAX_CLAIM) throw new ActionError(`Maximum bid is ${LADDER_MAX_CLAIM}`)
   if (amount % CLAIM_STEP !== 0) throw new ActionError(`Bids move in steps of ${CLAIM_STEP}`)
   if (amount < minAllowed(room)) throw new ActionError(`Bid must be at least ${minAllowed(room)}`)
 

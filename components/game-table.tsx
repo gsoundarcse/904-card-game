@@ -34,7 +34,7 @@ function Seat({ seat }: { seat: SeatView }) {
   return (
     <div
       className={cn(
-        'flex w-28 max-w-[34vw] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5 rounded-2xl border bg-felt-dark/85 px-2 py-2 text-center backdrop-blur-sm transition-all sm:w-36 sm:gap-2 sm:px-3 sm:py-3',
+        'flex w-28 max-w-[34vw] flex-col items-center gap-1.5 rounded-2xl border bg-felt-dark/85 px-2 py-2 text-center backdrop-blur-sm transition-all sm:w-36 sm:gap-2 sm:px-3 sm:py-3',
         seat.isCurrent
           ? 'border-gold bg-gold/10 shadow-[0_0_0_2px_var(--gold),0_8px_30px_var(--team-a-glow)]'
           : seat.team === 0
@@ -165,7 +165,7 @@ export function GameTable({
 
       {/* trump indicator */}
       {showTrumpIndicator && (
-        <div className="fixed right-3 top-3 z-50 flex translate-x-0 flex-col items-center gap-1 rounded-xl border border-gold/40 bg-felt-dark/95 p-1 shadow-xl sm:absolute sm:left-auto sm:right-[8%] sm:top-[8%] sm:z-30 sm:translate-x-0 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+        <div className="absolute right-2 top-2 z-30 flex flex-col items-center gap-1 rounded-xl border border-gold/40 bg-felt-dark/95 p-1 shadow-xl sm:left-auto sm:right-[8%] sm:top-[8%] sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
           <span className="font-mono text-[10px] uppercase tracking-widest text-gold">Trump</span>
           <div className="relative">
             <MysteryCard size="sm" revealed={trumpRevealed} card={trumpRevealed ? displayTrumpCard : null} />
