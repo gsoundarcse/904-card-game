@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 const OPTIONS = [
   {
@@ -34,6 +34,12 @@ export function ConfigMenu({ onStart }: { onStart: (count: number, names: string
   const [count, setCount] = useState(4)
   const [solo, setSolo] = useState(true)
   const [names, setNames] = useState(['Player 1', 'Player 2', 'Player 3', 'Player 4', 'Player 5', 'Player 6'])
+  const startSectionRef = useRef<HTMLElement>(null)
+
+  function selectTableSize(size: number) {
+    setCount(size)
+    startSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 
   return (
     <div className="mx-auto flex min-h-svh w-full max-w-4xl flex-col items-center justify-center gap-10 px-4 py-12">
@@ -52,7 +58,7 @@ export function ConfigMenu({ onStart }: { onStart: (count: number, names: string
         <span>Play solo against 3 bots</span>
       </label>
 
-      <section className="w-full rounded-2xl border border-border bg-secondary/40 p-5">
+      <section ref={startSectionRef} className="w-full rounded-2xl border border-border bg-secondary/40 p-5">
         <h2 className="font-serif text-xl font-bold text-gold-soft">Player names</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {names.slice(0, solo ? 1 : count).map((name, index) => (
@@ -82,7 +88,7 @@ export function ConfigMenu({ onStart }: { onStart: (count: number, names: string
           <button
             key={opt.count}
             type="button"
-            onClick={() => setCount(opt.count)}
+            onClick={() => selectTableSize(opt.count)}
             className={cn(
               'group flex min-w-0 flex-col items-start gap-3 rounded-2xl border border-border bg-secondary/60 p-5 text-left sm:p-6',
               'cursor-pointer',
