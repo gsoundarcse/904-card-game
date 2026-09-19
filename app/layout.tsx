@@ -1,8 +1,21 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Geist, Cinzel } from 'next/font/google'
+import Script from 'next/script'
 import { auth, signOut } from '@/auth'
+import { ThemeToggle } from '@/components/theme-toggle'
 import './globals.css'
+
+// Runs before paint so the stored theme applies with no flash of the other
+// mode. Defaults to light (this app's default) when nothing is stored yet.
+const THEME_INIT_SCRIPT = `
+(function() {
+  try {
+    var stored = localStorage.getItem('theme');
+    if (stored === 'dark') document.documentElement.classList.add('dark');
+  } catch (e) {}
+})();
+`
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 const cinzel = Cinzel({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-cinzel' })
@@ -32,8 +45,10 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#1f4436',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#1f4436' },
+  ],
 }
 
 export default async function RootLayout({
@@ -43,8 +58,11 @@ export default async function RootLayout({
 }>) {
   const session = await auth()
   return (
-    <html lang="en" className={`${geist.variable} ${cinzel.variable} bg-background`}>
+    <html lang="en" className={`${geist.variable} ${cinzel.variable} bg-background`} suppressHydrationWarning>
       <body className="font-sans antialiased">
+        <Script id="theme-init" strategy="beforeInteractive">
+          {THEME_INIT_SCRIPT}
+        </Script>
         <AuthBar userName={session?.user?.name ?? null} />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
@@ -56,6 +74,7 @@ export default async function RootLayout({
 function AuthBar({ userName }: { userName: string | null }) {
   return (
     <div className="relative z-40 flex items-center justify-end gap-2 border-b border-border/60 bg-background px-3 py-1.5 font-mono text-[11px]">
+      <ThemeToggle />
       {userName ? (
         <>
           <span className="hidden text-muted-foreground sm:inline">{userName}</span>

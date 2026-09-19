@@ -47,7 +47,7 @@ function Seat({ seat }: { seat: SeatView }) {
         <span className="max-w-[28vw] truncate text-xs font-semibold text-foreground sm:max-w-32 sm:text-sm">{seat.name}</span>
       </div>
       <span className={cn(
-        'rounded-full px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-widest sm:text-xs',
+        'whitespace-nowrap rounded-full px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-widest sm:text-xs',
         seat.team === 0 ? 'bg-team-a/15 text-team-a' : 'bg-team-b/15 text-team-b',
       )}>
         {TEAM_NAME[seat.team]}

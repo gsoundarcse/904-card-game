@@ -42,46 +42,88 @@
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --radius: 0.75rem;
 
-  --background: oklch(0.26 0.045 158);
-  --foreground: oklch(0.95 0.02 95);
+  --background: oklch(0.99 0.004 95);
+  --foreground: oklch(0.22 0.03 260);
 
   --card: oklch(0.965 0.012 95);
   --card-foreground: oklch(0.24 0.03 260);
 
-  --popover: oklch(0.3 0.05 158);
-  --popover-foreground: oklch(0.95 0.02 95);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.03 260);
 
-  --primary: oklch(0.8 0.13 85);
-  --primary-foreground: oklch(0.24 0.05 90);
+  /* No yellow: green for the general accent, blue for Team A, red for Team B. */
+  --primary: oklch(0.55 0.14 155);
+  --primary-foreground: oklch(0.99 0.01 95);
 
-  --secondary: oklch(0.32 0.05 158);
-  --secondary-foreground: oklch(0.95 0.02 95);
+  --secondary: oklch(0.95 0.012 95);
+  --secondary-foreground: oklch(0.24 0.03 260);
 
-  --muted: oklch(0.36 0.045 158);
-  --muted-foreground: oklch(0.82 0.03 120);
+  --muted: oklch(0.94 0.01 95);
+  --muted-foreground: oklch(0.48 0.02 260);
 
-  --accent: oklch(0.8 0.13 85);
-  --accent-foreground: oklch(0.24 0.05 90);
+  --accent: oklch(0.55 0.14 155);
+  --accent-foreground: oklch(0.99 0.01 95);
 
-  --destructive: oklch(0.6 0.21 25);
+  --destructive: oklch(0.55 0.2 25);
 
-  --border: oklch(0.42 0.05 158);
-  --input: oklch(0.42 0.05 158);
-  --ring: oklch(0.8 0.13 85);
+  --border: oklch(0.88 0.012 95);
+  --input: oklch(0.88 0.012 95);
+  --ring: oklch(0.55 0.14 155);
 
   --felt: oklch(0.34 0.055 158);
   --felt-dark: oklch(0.22 0.04 160);
   --felt-line: oklch(0.46 0.06 158);
-  --gold: oklch(0.8 0.13 85);
-  --gold-soft: oklch(0.86 0.09 90);
+  --gold: oklch(0.55 0.14 155);
+  --gold-soft: oklch(0.45 0.13 155);
   --suit-red: oklch(0.55 0.2 25);
-  --team-a: oklch(0.78 0.13 85);
+  --team-a: oklch(0.52 0.14 250);
+  --team-b: oklch(0.55 0.18 25);
+  --team-a-glow: oklch(0.52 0.14 250 / 0.1);
+  --team-b-glow: oklch(0.55 0.18 25 / 0.12);
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* True near-black chrome, including the game table surface itself —
+     --felt/--felt-dark/--felt-line go dark here instead of staying green. */
+  --background: oklch(0.15 0.006 260);
+  --foreground: oklch(0.95 0.01 95);
+
+  --popover: oklch(0.19 0.008 260);
+  --popover-foreground: oklch(0.95 0.01 95);
+
+  --primary: oklch(0.68 0.16 155);
+  --primary-foreground: oklch(0.16 0.03 155);
+
+  --secondary: oklch(0.21 0.008 260);
+  --secondary-foreground: oklch(0.95 0.01 95);
+
+  --muted: oklch(0.24 0.008 260);
+  --muted-foreground: oklch(0.72 0.015 95);
+
+  --accent: oklch(0.68 0.16 155);
+  --accent-foreground: oklch(0.16 0.03 155);
+
+  --destructive: oklch(0.6 0.21 25);
+
+  --border: oklch(0.3 0.01 260);
+  --input: oklch(0.3 0.01 260);
+  --ring: oklch(0.68 0.16 155);
+
+  --gold: oklch(0.68 0.16 155);
+  --gold-soft: oklch(0.75 0.14 155);
+  --team-a: oklch(0.68 0.15 250);
   --team-b: oklch(0.7 0.18 25);
-  --team-a-glow: oklch(0.78 0.13 85 / 0.16);
+  --team-a-glow: oklch(0.68 0.15 250 / 0.16);
   --team-b-glow: oklch(0.7 0.18 25 / 0.2);
+
+  --felt: oklch(0.2 0.008 260);
+  --felt-dark: oklch(0.12 0.006 260);
+  --felt-line: oklch(0.28 0.01 260);
 }
 
 @layer base {
