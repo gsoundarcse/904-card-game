@@ -14,6 +14,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!action?.type) throw new ActionError('No action given')
 
     const room = applyAction(id, playerId, secret, action)
+    // A lobby-leave removes the player entirely — there's no view left to build for them.
+    if (!room.players.some((p) => p.id === playerId)) return NextResponse.json({ left: true })
     return NextResponse.json({ view: viewFor(room, playerId) })
   } catch (err) {
     const message = err instanceof ActionError ? err.message : 'That move was rejected'
