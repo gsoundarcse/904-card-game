@@ -458,10 +458,21 @@ export function CardGame() {
         trumpRevealed,
         current,
       )
-      if (card) handlePlayCard(card.id)
+      if (card) {
+        // Same eligibility as a human claimer's double: already swept every trick, one card left.
+        const canDouble =
+          !solo &&
+          current === claimer &&
+          players[current].hand.length === 1 &&
+          !trumpCard &&
+          !doubleCalled &&
+          trickNumber === CARDS_PER_PLAYER - 1 &&
+          teamTricks[teamOf(current)] === CARDS_PER_PLAYER - 1
+        handlePlayCard(card.id, canDouble)
+      }
     }, 1200)
     return () => { if (botDelay.current) clearTimeout(botDelay.current) }
-  }, [phase, resolving, current, players, playable, trick, trumpSuit, trumpRevealed, handleAskTrump, handlePlayCard])
+  }, [phase, resolving, current, players, playable, trick, trumpSuit, trumpRevealed, handleAskTrump, handlePlayCard, solo, claimer, trumpCard, doubleCalled, trickNumber, teamTricks])
 
   useEffect(() => () => { if (bannerTimer.current) clearTimeout(bannerTimer.current) }, [])
 

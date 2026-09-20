@@ -380,8 +380,23 @@ function performBotTurn(room: Room) {
       if (card) doSelectTrump(room, bot, card.id)
     } else if (room.status === 'playing') {
       const playable = getPlayable(r.hands[bot.seat], r.trick, r.trumpRevealed, !isSoloRound(room))
-      const card = chooseBotCard(r.hands[bot.seat], playable.playableIds, r.trick, r.trumpSuit, r.trumpRevealed, bot.seat)
-      if (card) doPlayCard(room, bot, card.id, false)
+      if (playable.canAskTrump) {
+        doAskTrump(room, bot)
+      } else {
+        const card = chooseBotCard(r.hands[bot.seat], playable.playableIds, r.trick, r.trumpSuit, r.trumpRevealed, bot.seat)
+        if (card) {
+          // Same eligibility as a human claimer's double: already swept every trick, one card left.
+          const canDouble =
+            !isSoloRound(room) &&
+            r.claimer === bot.seat &&
+            r.hands[bot.seat].length === 1 &&
+            !r.trumpCard &&
+            !r.doubleCalled &&
+            r.trickNumber === CARDS_PER_PLAYER - 1 &&
+            r.teamTricks[teamOf(bot.seat)] === CARDS_PER_PLAYER - 1
+          doPlayCard(room, bot, card.id, canDouble)
+        }
+      }
     }
   } catch {
     // A bot move should never legitimately be rejected. If room state moved
