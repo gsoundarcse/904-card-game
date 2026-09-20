@@ -19,6 +19,7 @@ export default function HomePage() {
   const [seatCount, setSeatCount] = useState<4 | 6>(4)
   const [name, setName] = useState('')
   const [seatRoles, setSeatRoles] = useState<('bot' | 'invite')[]>(Array(3).fill('bot'))
+  const [customizing, setCustomizing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -50,6 +51,15 @@ export default function HomePage() {
         return
       }
       saveCredentials(data.roomId, { playerId: data.playerId, secret: data.secret })
+      // All-bots quick path: every seat is already filled, so start the match
+      // immediately instead of leaving the player on an empty lobby screen.
+      if (invites === 0) {
+        await fetch(`/api/thinnai/${data.roomId}/action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId: data.playerId, secret: data.secret, action: { type: 'start' } }),
+        }).catch(() => {})
+      }
       router.push(`/thinnai/${data.roomId}`)
     } catch {
       setError('Could not reach the server')
@@ -61,38 +71,35 @@ export default function HomePage() {
   const invites = seatRoles.filter((role) => role === 'invite').length
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col items-center justify-center gap-8 px-4 py-12">
+    <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col items-center justify-center gap-2 px-3 py-3 sm:gap-8 sm:px-4 sm:py-12">
       {roomClosed && (
         <p className="w-full rounded-xl border border-destructive/60 bg-destructive/10 px-4 py-2.5 text-center text-sm text-destructive">
           That thinnai is closed or no longer exists.
         </p>
       )}
       <header className="text-center">
-        <p className="mb-2 font-mono text-xs uppercase tracking-[0.35em] text-gold">Trick-Taking · Counter-Claim</p>
-        <h1 className="text-balance font-serif text-6xl font-bold tracking-tight text-gold-soft sm:text-7xl">
+        <p className="mb-1 font-mono text-xs uppercase tracking-[0.35em] text-gold sm:mb-2">Trick-Taking · Counter-Claim</p>
+        <h1 className="text-balance font-serif text-4xl font-bold tracking-tight text-gold-soft sm:text-7xl">
           Thinnai
         </h1>
-        <p className="mx-auto mt-4 max-w-md text-pretty text-sm leading-relaxed text-muted-foreground">
-          Pick a table, fill the other seats with bots or an invite link, and deal.
-        </p>
-        <Link href="/results" className="mt-3 inline-block font-mono text-[11px] text-muted-foreground hover:text-gold">
+        <Link href="/results" className="mt-1 inline-block font-mono text-[11px] text-muted-foreground hover:text-gold sm:mt-3">
           See results & leaderboard
         </Link>
       </header>
 
-      <div className="grid w-full gap-4 sm:grid-cols-2">
+      <div className="grid w-full gap-1.5 sm:gap-4 sm:grid-cols-2">
         {SIZES.map((s) => (
           <button
             key={s.count}
             type="button"
             onClick={() => changeSeatCount(s.count)}
             className={cn(
-              'flex flex-col items-start gap-1 rounded-2xl border border-border bg-secondary/60 p-5 text-left transition-all hover:-translate-y-1 hover:border-gold',
+              'flex flex-col items-start gap-0.5 rounded-2xl border border-border bg-secondary/60 p-2.5 text-left transition-all hover:-translate-y-1 hover:border-gold sm:gap-1 sm:p-5',
               seatCount === s.count && 'border-gold bg-secondary',
             )}
           >
             <div className="flex w-full items-center justify-between">
-              <span className="font-serif text-3xl font-bold text-gold-soft">{s.count} players</span>
+              <span className="font-serif text-xl font-bold text-gold-soft sm:text-3xl">{s.count} players</span>
               <span className="rounded-full border border-gold/40 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-gold">
                 {s.deck}
               </span>
@@ -102,64 +109,76 @@ export default function HomePage() {
         ))}
       </div>
 
-      <section className="w-full rounded-2xl border border-border bg-secondary/40 p-5">
-        <label htmlFor="name" className="mb-2 block font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-          Your name (seat 1)
-        </label>
-        <input
-          id="name"
-          value={name}
-          maxLength={20}
-          onChange={(e) => {
-            setName(e.target.value)
-            setError(null)
-          }}
-          placeholder="Soundar"
-          className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-gold"
-        />
-
-        <p className="mb-2 mt-5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-          The other {seatRoles.length} seats
-        </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {seatRoles.map((role, i) => {
-            const seat = i + 1
-            return (
-              <div
-                key={seat}
-                className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-3 py-2.5"
-              >
-                <span className="flex items-center gap-2">
-                  <span
-                    className={cn('h-2 w-2 rounded-full', teamOf(seat) === 0 ? 'bg-team-a' : 'bg-team-b')}
-                    aria-hidden
-                  />
-                  <span className="font-mono text-xs text-muted-foreground">
-                    Seat {seat + 1} · {TEAM_NAME[teamOf(seat)]}
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => toggleSeat(i)}
-                  className={cn(
-                    'rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-widest transition-colors',
-                    role === 'bot' ? 'bg-secondary text-foreground' : 'bg-gold/15 text-gold',
-                  )}
-                >
-                  {role === 'bot' ? 'Bot' : 'Invite a person'}
-                </button>
-              </div>
-            )
-          })}
+      <section className="w-full rounded-2xl border border-border bg-secondary/40 p-2.5 sm:p-5">
+        <div className="flex items-center gap-3">
+          <label htmlFor="name" className="shrink-0 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+            Name
+          </label>
+          <input
+            id="name"
+            value={name}
+            maxLength={20}
+            onChange={(e) => {
+              setName(e.target.value)
+              setError(null)
+            }}
+            placeholder="Soundar"
+            className="min-w-0 flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold"
+          />
         </div>
+
+        <p className="mb-1.5 mt-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground sm:mb-2 sm:mt-5">
+          {customizing ? `The other ${seatRoles.length} seats` : `You + ${seatRoles.length} bots`}
+        </p>
+        {customizing ? (
+          <div className="grid gap-1.5 sm:gap-2 sm:grid-cols-2">
+            {seatRoles.map((role, i) => {
+              const seat = i + 1
+              return (
+                <div
+                  key={seat}
+                  className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-3 py-1.5 sm:py-2"
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={cn('h-2 w-2 rounded-full', teamOf(seat) === 0 ? 'bg-team-a' : 'bg-team-b')}
+                      aria-hidden
+                    />
+                    <span className="font-mono text-xs text-muted-foreground">
+                      Seat {seat + 1} · {TEAM_NAME[teamOf(seat)]}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggleSeat(i)}
+                    className={cn(
+                      'rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-widest transition-colors',
+                      role === 'bot' ? 'bg-secondary text-foreground' : 'bg-gold/15 text-gold',
+                    )}
+                  >
+                    {role === 'bot' ? 'Bot' : 'Invite a person'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCustomizing(true)}
+            className="font-mono text-[11px] text-muted-foreground underline decoration-dotted hover:text-gold"
+          >
+            Want to invite friends instead? Customize seats
+          </button>
+        )}
 
         <button
           type="button"
           onClick={create}
           disabled={busy}
-          className="mt-5 w-full rounded-xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40"
+          className="mt-3 w-full rounded-xl bg-gold px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40 sm:mt-5 sm:py-3"
         >
-          {busy ? 'Creating…' : invites > 0 ? 'Create thinnai & get invite link' : 'Deal the cards'}
+          {busy ? 'Creating…' : invites > 0 ? 'Create thinnai & get invite link' : `Play now — you + ${seatRoles.length} bots`}
         </button>
         {error && <p className="mt-3 text-center font-mono text-[11px] text-destructive">{error}</p>}
       </section>
