@@ -165,11 +165,8 @@ export function GameTable({
       'game-table relative mx-auto h-[380px] w-full max-w-4xl overflow-hidden rounded-3xl border border-team-b/30 bg-[linear-gradient(145deg,var(--felt-dark),var(--felt)_48%,var(--felt-dark))] shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:h-[560px]',
       tableLayout,
     )}>
-      {/* felt surface */}
-      <div className="absolute inset-3 rounded-2xl border border-gold/30 bg-[radial-gradient(ellipse_at_center,var(--felt)_0%,var(--felt-dark)_100%)] shadow-[inset_0_0_70px_rgba(0,0,0,0.4)] sm:inset-5 sm:rounded-3xl">
-        <div className="absolute inset-3 rounded-xl border border-team-b/25 sm:inset-5 sm:rounded-2xl" />
-        <div className="absolute inset-6 rounded-lg border border-team-a/15 sm:inset-10 sm:rounded-xl" />
-      </div>
+      {/* felt surface — a single border/inset instead of three nested rings, to reclaim the space they used to eat */}
+      <div className="absolute inset-2 rounded-2xl border border-gold/30 bg-[radial-gradient(ellipse_at_center,var(--felt)_0%,var(--felt-dark)_100%)] shadow-[inset_0_0_70px_rgba(0,0,0,0.4)] sm:inset-3 sm:rounded-3xl" />
 
       {/* trump indicator */}
       {showTrumpIndicator && (

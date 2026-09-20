@@ -359,17 +359,17 @@ function Table({
         banner={banner}
       />
 
-      <section className="rounded-2xl border border-border bg-secondary/50 p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <section className="rounded-2xl border border-border bg-secondary/50 p-3 sm:p-4">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2 sm:mb-3">
           <h2 className="font-serif text-lg font-bold text-gold-soft">
             {yourTurn ? 'Your turn' : `Waiting on ${view.players.find((p) => p.seat === r.current)?.name ?? '…'}`}
           </h2>
-          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+          <span className="hidden font-mono text-[11px] uppercase tracking-widest text-muted-foreground sm:inline">
             {teamLabel(teamOf(view.yourSeat), view.seatCount)} · trick {Math.min(r.trickNumber + 1, 6)} of 6
           </span>
         </div>
 
-        <div className="mobile-hand-tray flex min-h-36 items-end justify-center overflow-visible pb-2 px-1 sm:px-3">
+        <div className="mobile-hand-tray flex min-h-24 items-end justify-center overflow-visible pb-2 px-1 sm:min-h-36 sm:px-3">
           <div className="grid w-full grid-cols-6 items-end gap-1 sm:flex sm:w-auto sm:gap-3">
           {view.yourHand.length ? (
             view.yourHand.map((card, i) =>

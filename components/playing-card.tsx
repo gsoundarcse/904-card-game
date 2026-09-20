@@ -11,6 +11,28 @@ const SIZES = {
 
 type Size = keyof typeof SIZES
 
+/** Simple line-art faces for the picture cards — filled with currentColor so they pick up the suit's color. */
+const FACE_ICONS: Partial<Record<Card['rank'], (props: { className?: string }) => React.ReactNode>> = {
+  K: ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M3 8l4 3 5-6 5 6 4-3-2 11H5L3 8z" />
+      <rect x="4" y="19" width="16" height="2" rx="0.5" />
+    </svg>
+  ),
+  Q: ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M12 2l2.6 4.9 5-1.6-1.4 5.1L21 12l-2.8 1.6 1.4 5.1-5-1.6L12 22l-2.6-4.9-5 1.6 1.4-5.1L3 12l2.8-1.6-1.4-5.1 5 1.6L12 2z" />
+      <circle cx="12" cy="12" r="2.4" className="fill-card" />
+    </svg>
+  ),
+  J: ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M11 2h2v13.5a3.5 3.5 0 11-6.13-2.32l1.5 1.32A1.5 1.5 0 1011 15V2z" />
+      <rect x="8" y="1" width="8" height="2" rx="0.5" />
+    </svg>
+  ),
+}
+
 export function CardFace({
   card,
   size = 'md',
@@ -22,6 +44,7 @@ export function CardFace({
 }) {
   const isRed = RED_SUITS.includes(card.suit)
   const symbol = SUIT_SYMBOL[card.suit]
+  const FaceIcon = FACE_ICONS[card.rank]
   return (
     <div
       className={cn(
@@ -35,16 +58,37 @@ export function CardFace({
         <span>{card.rank}</span>
         <span>{symbol}</span>
       </div>
-      <div
-        className={cn(
-          'text-center font-serif leading-none',
-          size === 'lg' ? 'text-2xl' : size === 'md' ? 'text-xl' : 'text-base',
-          isRed ? 'text-suit-red' : 'text-card-foreground',
-        )}
-        aria-hidden
-      >
-        {symbol}
-      </div>
+      {FaceIcon ? (
+        <FaceIcon
+          className={cn(
+            'mx-auto',
+            size === 'lg' ? 'h-9 w-9' : size === 'md' ? 'h-7 w-7' : 'h-5 w-5',
+            isRed ? 'text-suit-red' : 'text-card-foreground',
+          )}
+        />
+      ) : (
+        <div
+          className={cn(
+            'text-center font-serif leading-none',
+            card.rank === 'A'
+              ? size === 'lg'
+                ? 'text-4xl'
+                : size === 'md'
+                  ? 'text-3xl'
+                  : 'text-xl'
+              : size === 'lg'
+                ? 'text-2xl'
+                : size === 'md'
+                  ? 'text-xl'
+                  : 'text-base',
+            card.rank === 'A' && 'font-bold',
+            isRed ? 'text-suit-red' : 'text-card-foreground',
+          )}
+          aria-hidden
+        >
+          {symbol}
+        </div>
+      )}
       <div
         className={cn(
           'self-end rounded-sm bg-black/5 px-1 font-mono text-[9px] font-semibold leading-tight text-card-foreground/70',
