@@ -602,6 +602,11 @@ function RoundSummary({
   if (!s) return null
   const matchOver = view.status === 'matchOver'
   const youArePenalised = teamOf(view.yourSeat) === s.penalisedTeam
+  const winningTeam: 0 | 1 = matchOver
+    ? ((1 - (view.match.loser ?? 0)) as 0 | 1)
+    : ((1 - s.penalisedTeam) as 0 | 1)
+  const claimerName = view.players.find((p) => p.seat === view.round.claimer)?.name ?? 'Someone'
+  const claimerTeam = view.round.claimer === null ? null : teamOf(view.round.claimer)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
@@ -610,23 +615,46 @@ function RoundSummary({
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">
           {matchOver ? 'Match over' : `Round ${view.match.roundNumber}`}
         </p>
-        <h2
+
+        <div
           className={cn(
-            'mt-2 font-serif text-4xl font-bold',
-            matchOver ? 'text-destructive' : s.success ? 'text-gold-soft' : 'text-destructive',
+            'mt-3 rounded-2xl border-2 px-4 py-4',
+            winningTeam === 0 ? 'border-team-a bg-team-a/10' : 'border-team-b bg-team-b/10',
           )}
         >
-          {matchOver
-            ? `${teamLabel(view.match.loser ?? 0, view.seatCount)} loses`
-            : s.success
-              ? 'Claim made'
-              : 'Claim failed'}
-        </h2>
-        {matchOver && (
-          <p className="mt-1 font-serif text-lg font-bold text-gold">
-            {teamLabel((1 - (view.match.loser ?? 0)) as 0 | 1, view.seatCount)} wins the match! 🎉
+          <p className={cn('font-mono text-[10px] font-semibold uppercase tracking-widest', winningTeam === 0 ? 'text-team-a' : 'text-team-b')}>
+            {matchOver ? 'Wins the match' : 'Wins the round'}
           </p>
-        )}
+          <p className="mt-1 font-serif text-3xl font-bold text-foreground">
+            {teamLabel(winningTeam, view.seatCount)}
+            {matchOver && ' 🎉'}
+          </p>
+        </div>
+
+        <p className="mt-4 font-mono text-xs text-muted-foreground">
+          {claimerName} ({claimerTeam !== null ? teamLabel(claimerTeam, view.seatCount) : ''}) claimed{' '}
+          <span className="font-semibold text-foreground">{view.round.claim}</span>
+        </p>
+
+        <p
+          className={cn(
+            'mt-1 font-serif text-2xl font-bold',
+            s.success ? 'text-gold-soft' : 'text-destructive',
+          )}
+        >
+          {s.success ? 'Claim made' : 'Claim failed'}
+        </p>
+
+        <div className="mt-3 flex justify-center gap-6">
+          {([0, 1] as const).map((t) => (
+            <div key={t} className="flex flex-col items-center">
+              <span className={cn('text-[10px] font-semibold uppercase tracking-widest', t === 0 ? 'text-team-a' : 'text-team-b')}>
+                {teamLabel(t, view.seatCount)}
+              </span>
+              <span className="font-serif text-xl font-bold text-foreground">{view.round.teamScores[t]} pts</span>
+            </div>
+          ))}
+        </div>
 
         <ul className="mt-4 space-y-1 text-sm text-muted-foreground">
           {s.reasons.map((reason) => (

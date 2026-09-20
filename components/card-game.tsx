@@ -24,6 +24,7 @@ import {
   shuffle,
   sortHand,
   settleRound,
+  type Settlement,
   SOLO_CLAIM,
   suggestTrumpCard,
   SUIT_SYMBOL,
@@ -92,7 +93,7 @@ export function CardGame() {
   const [matchCards, setMatchCards] = useState<[number, number]>([0, 0])
   const [teamTricks, setTeamTricks] = useState<[number, number]>([0, 0])
   const [doubleCalled, setDoubleCalled] = useState(false)
-  const [roundSuccess, setRoundSuccess] = useState(false)
+  const [roundSettlement, setRoundSettlement] = useState<Settlement | null>(null)
   const [banner, setBanner] = useState<string | null>(null)
   const [resolving, setResolving] = useState(false)
 
@@ -137,6 +138,7 @@ export function CardGame() {
     setTeamScores([0, 0])
     setTeamTricks([0, 0])
     setDoubleCalled(false)
+    setRoundSettlement(null)
     setBanner(null)
     setResolving(false)
     setPhase('dealing')
@@ -402,7 +404,7 @@ export function CardGame() {
           updated[settlement.penalisedTeam] += settlement.cards
           return updated
         })
-        setRoundSuccess(settlement.success)
+        setRoundSettlement(settlement)
         setPhase('roundOver')
       }
     },
@@ -747,14 +749,13 @@ export function CardGame() {
         />
       )}
 
-      {phase === 'roundOver' && claimerTeam !== null && (
+      {phase === 'roundOver' && claimerTeam !== null && roundSettlement && (
         <RoundOver
           claimerName={claimer !== null ? players[claimer].name : ''}
           claimerTeam={claimerTeam}
           claim={claim}
-          captured={teamScores[claimerTeam]}
-          success={roundSuccess}
           teamScores={teamScores}
+          settlement={roundSettlement}
           matchCards={matchCards}
           cardLimit={cardLimit(n)}
           onNextRound={nextRound}
@@ -873,9 +874,8 @@ function RoundOver({
   claimerName,
   claimerTeam,
   claim,
-  captured,
-  success,
   teamScores,
+  settlement,
   matchCards,
   cardLimit: lossLimit,
   onNextRound,
@@ -884,9 +884,8 @@ function RoundOver({
   claimerName: string
   claimerTeam: 0 | 1
   claim: number
-  captured: number
-  success: boolean
   teamScores: [number, number]
+  settlement: Settlement
   matchCards: [number, number]
   cardLimit: number
   onNextRound: () => void
@@ -894,25 +893,58 @@ function RoundOver({
 }) {
   const loser = matchCards.findIndex((cards) => cards >= lossLimit) as 0 | 1 | -1
   const matchOver = loser !== -1
-  const winner = matchOver ? ((1 - loser) as 0 | 1) : null
+  const winningTeam: 0 | 1 = matchOver ? ((1 - loser) as 0 | 1) : ((1 - settlement.penalisedTeam) as 0 | 1)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
       {matchOver && <Ribbons />}
       <div className="w-full max-w-md rounded-2xl border-2 border-gold/50 bg-popover p-8 text-center shadow-2xl">
-        <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">{matchOver ? 'Match Over' : 'Round Over'}</p>
-        <h2 className={cn('mt-2 font-serif text-4xl font-bold', success ? 'text-gold-soft' : 'text-destructive')}>
-          {matchOver ? `${TEAM_NAME[loser]} loses` : success ? 'Claim Made!' : 'Claim Failed'}
-        </h2>
-        {matchOver && winner !== null && (
-          <p className={cn('mt-1 font-serif text-lg font-bold', winner === 0 ? 'text-team-a' : 'text-team-b')}>
-            {TEAM_NAME[winner]} wins the match! 🎉
+        <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">{matchOver ? 'Match over' : 'Round over'}</p>
+
+        <div
+          className={cn(
+            'mt-3 rounded-2xl border-2 px-4 py-4',
+            winningTeam === 0 ? 'border-team-a bg-team-a/10' : 'border-team-b bg-team-b/10',
+          )}
+        >
+          <p className={cn('font-mono text-[10px] font-semibold uppercase tracking-widest', winningTeam === 0 ? 'text-team-a' : 'text-team-b')}>
+            {matchOver ? 'Wins the match' : 'Wins the round'}
           </p>
-        )}
-        <p className="mt-3 text-sm text-muted-foreground">
-          {claimerName} ({TEAM_NAME[claimerTeam]}) claimed <span className="font-semibold text-gold">{claim}</span>
-          {isSoloClaim(claim) ? ' solo' : ''} and
-          captured <span className={cn('font-semibold', success ? 'text-gold' : 'text-destructive')}>{captured}</span>.
+          <p className="mt-1 font-serif text-3xl font-bold text-foreground">
+            {TEAM_NAME[winningTeam]}
+            {matchOver && ' 🎉'}
+          </p>
+        </div>
+
+        <p className="mt-4 font-mono text-xs text-muted-foreground">
+          {claimerName} ({TEAM_NAME[claimerTeam]}) claimed <span className="font-semibold text-foreground">{claim}</span>
+          {isSoloClaim(claim) ? ' solo' : ''}
         </p>
+
+        <p className={cn('mt-1 font-serif text-2xl font-bold', settlement.success ? 'text-gold-soft' : 'text-destructive')}>
+          {settlement.success ? 'Claim made' : 'Claim failed'}
+        </p>
+
+        <div className="mt-3 flex justify-center gap-6">
+          {([0, 1] as const).map((t) => (
+            <div key={t} className="flex flex-col items-center">
+              <span className={cn('text-[10px] font-semibold uppercase tracking-widest', t === 0 ? 'text-team-a' : 'text-team-b')}>
+                {TEAM_NAME[t]}
+              </span>
+              <span className="font-serif text-xl font-bold text-foreground">{teamScores[t]} pts</span>
+            </div>
+          ))}
+        </div>
+
+        <ul className="mt-4 space-y-1 text-sm text-muted-foreground">
+          {settlement.reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+
+        <p className="mt-4 font-serif text-lg font-bold text-gold">
+          {settlement.cards} card{settlement.cards === 1 ? '' : 's'} to {TEAM_NAME[settlement.penalisedTeam]}
+        </p>
+
         <div className="mt-5 flex justify-center gap-4">
           {([0, 1] as const).map((t) => (
             <div key={t} className="flex flex-col">
@@ -920,7 +952,7 @@ function RoundOver({
                 {TEAM_NAME[t]}
               </span>
               <span className="font-serif text-3xl font-bold text-foreground">
-                {teamScores[t]}<span className="ml-1 font-mono text-xs font-normal text-muted-foreground">({matchCards[t]}/{lossLimit})</span>
+                {matchCards[t]}<span className="ml-1 font-mono text-xs font-normal text-muted-foreground">/ {lossLimit}</span>
               </span>
             </div>
           ))}
