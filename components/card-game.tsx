@@ -294,7 +294,7 @@ export function CardGame() {
     botDelay.current = setTimeout(() => {
       if (highBid === 0) handleClaim(MIN_CLAIM)
       else handlePass()
-    }, 700)
+    }, 1200)
     return () => { if (botDelay.current) clearTimeout(botDelay.current) }
   }, [phase, current, players, highBid, handleClaim, handlePass])
 
@@ -323,7 +323,7 @@ export function CardGame() {
 
   useEffect(() => {
     if (phase !== 'trump' || claimer === null || !players[claimer]?.isBot) return
-    botDelay.current = setTimeout(() => handleSelectTrump(players[claimer].hand[0]?.id ?? ''), 700)
+    botDelay.current = setTimeout(() => handleSelectTrump(players[claimer].hand[0]?.id ?? ''), 1200)
     return () => { if (botDelay.current) clearTimeout(botDelay.current) }
   }, [phase, claimer, players, handleSelectTrump])
 
@@ -459,7 +459,7 @@ export function CardGame() {
         current,
       )
       if (card) handlePlayCard(card.id)
-    }, 700)
+    }, 1200)
     return () => { if (botDelay.current) clearTimeout(botDelay.current) }
   }, [phase, resolving, current, players, playable, trick, trumpSuit, trumpRevealed, handleAskTrump, handlePlayCard])
 

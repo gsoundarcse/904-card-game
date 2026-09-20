@@ -351,7 +351,7 @@ export function applyAction(id: string, playerId: string, secret: string, action
 // bot seats plays out without any human action in between.
 // ---------------------------------------------------------------------------
 
-const BOT_TURN_DELAY_MS = 700
+const BOT_TURN_DELAY_MS = 1200
 
 function scheduleBotTurn(room: Room) {
   if (room.status !== 'bidding' && room.status !== 'trump' && room.status !== 'playing') return

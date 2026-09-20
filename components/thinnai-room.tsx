@@ -11,6 +11,7 @@ import {
   isSoloClaim,
   isValidClaimAmount,
   MAX_CLAIM,
+  suggestTrumpCard,
   SUIT_SYMBOL,
   SUITS,
   type Suit,
@@ -542,7 +543,7 @@ function PlayControls({
 }
 
 function TrumpPicker({ view, send }: { view: PlayerView; send: (a: Action) => void }) {
-  const [open, setOpen] = useState(false)
+  const suggested = suggestTrumpCard(view.yourHand)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
@@ -554,34 +555,35 @@ function TrumpPicker({ view, send }: { view: PlayerView; send: (a: Action) => vo
           Its suit becomes trump — and you cannot play that card until trump is asked for.
         </p>
 
-        {!open ? (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="mt-6 w-full rounded-xl border border-gold/50 bg-felt-dark px-4 py-6 font-serif text-xl font-bold text-gold hover:bg-felt"
-          >
-            Show my hand
-          </button>
-        ) : (
-          <>
-            <div className="mt-5 rounded-xl border border-border bg-background/40 p-3">
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Tap a card to lay it face down
-              </p>
-              <div className="grid grid-cols-2 justify-items-center gap-3 pb-1 sm:grid-cols-3">
-                {view.yourHand.map((card) => (
-                  <ClickableCard
-                    key={card.id}
-                    card={card}
-                    size="md"
-                    fan={false}
-                    onClick={() => send({ type: 'selectTrump', cardId: card.id })}
-                  />
-                ))}
+        <div className="mt-5 rounded-xl border border-border bg-background/40 p-3">
+          <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Tap a card to lay it face down
+          </p>
+          {suggested && (
+            <p className="mb-3 font-mono text-[10px] text-gold">
+              Suggested: your weakest {suggested.suit} card — you hold the most of that suit, so trump favours you.
+            </p>
+          )}
+          <div className="flex flex-nowrap items-end justify-center gap-1.5 overflow-x-auto pb-1 sm:gap-3">
+            {view.yourHand.map((card) => (
+              <div key={card.id} className="flex flex-col items-center gap-1">
+                {suggested?.id === card.id && (
+                  <span className="rounded-full bg-gold px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-primary-foreground">
+                    Suggested
+                  </span>
+                )}
+                <ClickableCard
+                  card={card}
+                  size="md"
+                  mobileSize="sm"
+                  mobileGrid={false}
+                  fan={false}
+                  onClick={() => send({ type: 'selectTrump', cardId: card.id })}
+                />
               </div>
-            </div>
-          </>
-        )}
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
