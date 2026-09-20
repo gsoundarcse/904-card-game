@@ -241,9 +241,10 @@ export function getLobbyPreview(id: string): LobbyPreview {
     return {
       seat,
       team: teamOf(seat),
-      taken: room.seatPlan[seat] === 'bot' || occupant !== undefined,
+      // A bot seat stays selectable so a joiner can replace it.
+      taken: occupant !== undefined && !occupant.isBot,
       name: occupant?.name,
-      isBot: room.seatPlan[seat] === 'bot',
+      isBot: occupant?.isBot === true,
     }
   })
   return { roomId: room.id, seatCount: room.seatCount, status: room.status, seats }
@@ -265,14 +266,27 @@ export function joinRoom(id: string, name: string, userId?: string, seat?: numbe
   let target = -1
   if (seat !== undefined) {
     if (!Number.isInteger(seat) || seat < 0 || seat >= room.seatCount) throw new ActionError('That seat does not exist')
-    if (room.seatPlan[seat] !== 'human') throw new ActionError('That seat is taken by a bot')
-    if (room.players.some((p) => p.seat === seat)) throw new ActionError('That seat is already taken')
+    const occupant = room.players.find((p) => p.seat === seat)
+    if (occupant && !occupant.isBot) throw new ActionError('That seat is already taken')
+    if (occupant?.isBot) {
+      // Replacing a bot: evict it and hand the seat to the new human.
+      room.players = room.players.filter((p) => p.id !== occupant.id)
+      room.seatPlan[seat] = 'human'
+    }
     target = seat
   } else {
     for (let s = 0; s < room.seatCount; s++) {
       if (room.seatPlan[s] === 'human' && !room.players.some((p) => p.seat === s)) {
         target = s
         break
+      }
+    }
+    if (target === -1) {
+      const bot = room.players.find((p) => p.isBot)
+      if (bot) {
+        room.players = room.players.filter((p) => p.id !== bot.id)
+        room.seatPlan[bot.seat] = 'human'
+        target = bot.seat
       }
     }
   }
@@ -324,6 +338,7 @@ function dealRound(room: Room, dealer: number) {
 export type Action =
   | { type: 'start' }
   | { type: 'shuffleTeams' }
+  | { type: 'leaveRoom' }
   | { type: 'bid'; amount: number }
   | { type: 'pass' }
   | { type: 'selectTrump'; cardId: string }
@@ -343,6 +358,9 @@ export function applyAction(id: string, playerId: string, secret: string, action
         break
       case 'shuffleTeams':
         doShuffleTeams(room, player)
+        break
+      case 'leaveRoom':
+        doLeaveRoom(room, player)
         break
       case 'bid':
         doBid(room, player, action.amount)
@@ -465,6 +483,27 @@ function doShuffleTeams(room: Room, player: RoomPlayer) {
   const shuffledSeats = shuffle(humanSeats)
   const seated = humanSeats.map((seat) => room.players.find((p) => p.seat === seat)!)
   seated.forEach((p, i) => { p.seat = shuffledSeats[i] })
+}
+
+/**
+ * Exit the table. In the lobby this frees the seat entirely (passing on the
+ * host role if needed). Mid-match there is no clean way to remove a seat, so
+ * the player instead hands themselves over to the bot — as long as at least
+ * one other human is still at the table to keep the game meaningful.
+ */
+function doLeaveRoom(room: Room, player: RoomPlayer) {
+  if (room.status === 'lobby') {
+    room.players = room.players.filter((p) => p.id !== player.id)
+    if (room.hostId === player.id) {
+      const next = room.players.slice().sort((a, b) => a.seat - b.seat)[0]
+      if (next) room.hostId = next.id
+    }
+    return
+  }
+  if (player.isBot) throw new ActionError('You have already left')
+  const otherHumans = room.players.filter((p) => p.id !== player.id && !p.isBot)
+  if (otherHumans.length === 0) throw new ActionError('You are the only human left — no one to hand the table to')
+  player.isBot = true
 }
 
 /** Smallest amount that legally out-bids the current high bid — 900 jumps straight to the 904 solo claim. */

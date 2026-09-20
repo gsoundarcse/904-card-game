@@ -195,9 +195,20 @@ describe('joining', () => {
     rejects(() => joinRoom(room.id, 'Dupe', undefined, 0), /already taken/)
   })
 
-  it('rejects picking a bot seat', () => {
+  it('lets a joiner replace a bot seat', () => {
     const { room } = createRoom(4, 'Host', undefined, ['bot', 'invite', 'invite'])
-    rejects(() => joinRoom(room.id, 'Nope', undefined, 1), /bot/)
+    const { room: after, player } = joinRoom(room.id, 'TakesOver', undefined, 1)
+    assert.equal(player.seat, 1)
+    assert.equal(after.players.find((p) => p.seat === 1)?.isBot, undefined)
+    assert.equal(after.players.filter((p) => p.isBot).length, 0)
+  })
+
+  it('falls back to replacing a bot when every plain human seat is full', () => {
+    const { room } = createRoom(4, 'Host', undefined, ['bot', 'invite', 'invite'])
+    joinRoom(room.id, 'P2')
+    joinRoom(room.id, 'P3')
+    const { player } = joinRoom(room.id, 'ReplacesBot')
+    assert.equal(player.seat, 1)
   })
 })
 
@@ -222,6 +233,35 @@ describe('shuffling teams', () => {
   it('refuses to shuffle with fewer than two seated humans', () => {
     const { room, player: host } = createRoom(4, 'Host', undefined, ['bot', 'invite', 'invite'])
     assert.throws(() => applyAction(room.id, host.id, host.secret, { type: 'shuffleTeams' }), /at least two/)
+  })
+})
+
+describe('leaving the table', () => {
+  it('frees the seat when leaving from the lobby', () => {
+    const t = seatTable(4)
+    t.act(1, { type: 'leaveRoom' })
+    assert.equal(t.room().players.some((p) => p.seat === 1), false)
+  })
+
+  it('hands the host role to another seated player if the host leaves the lobby', () => {
+    const t = seatTable(4)
+    t.act(0, { type: 'leaveRoom' })
+    assert.notEqual(t.room().hostId, t.host.id)
+  })
+
+  it('converts a departing player to a bot mid-match, if another human remains', () => {
+    const t = dealtTable(4)
+    t.act(1, { type: 'leaveRoom' })
+    assert.equal(t.room().players.find((p) => p.seat === 1)?.isBot, true)
+  })
+
+  it('refuses to leave mid-match if no other human is seated', () => {
+    const { room, player: host } = createRoom(4, 'Host', undefined, ['bot', 'bot', 'bot'])
+    applyAction(room.id, host.id, host.secret, { type: 'start' })
+    assert.throws(
+      () => applyAction(room.id, host.id, host.secret, { type: 'leaveRoom' }),
+      /only human left/,
+    )
   })
 })
 

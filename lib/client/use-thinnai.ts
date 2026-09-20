@@ -35,6 +35,14 @@ export function saveCredentials(roomId: string, creds: Credentials) {
   }
 }
 
+export function clearCredentials(roomId: string) {
+  try {
+    window.localStorage.removeItem(storageKey(roomId))
+  } catch {
+    // Private browsing and similar — nothing was persisted anyway.
+  }
+}
+
 /**
  * Polls the room once a second and exposes a sender for actions.
  *
@@ -84,7 +92,7 @@ export function useThinnai(roomId: string, creds: Credentials | null) {
 
   const send = useCallback(
     async (action: Action) => {
-      if (!creds) return
+      if (!creds) return false
       setPending(true)
       setError(null)
       try {
@@ -96,12 +104,16 @@ export function useThinnai(roomId: string, creds: Credentials | null) {
         const data = await res.json()
         if (!res.ok) {
           setError(data?.error ?? 'That move was rejected')
-        } else if (data?.view && data.view.version >= versionRef.current) {
+          return false
+        }
+        if (data?.view && data.view.version >= versionRef.current) {
           versionRef.current = data.view.version
           setView(data.view)
         }
+        return true
       } catch {
         setError('Could not reach the table')
+        return false
       } finally {
         setPending(false)
       }

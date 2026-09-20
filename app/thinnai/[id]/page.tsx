@@ -153,7 +153,7 @@ function JoinGate({ roomId, onJoined }: { roomId: string; onJoined: (c: Credenti
                   <span className="flex items-center gap-2">
                     <span className={cn('h-2.5 w-2.5 rounded-full', s.team === 0 ? 'bg-team-a' : 'bg-team-b')} aria-hidden />
                     <span className="text-sm text-foreground">
-                      {s.taken ? (s.name ?? 'taken') : `Seat ${s.seat + 1}`}
+                      {s.taken ? (s.name ?? 'taken') : s.isBot ? `Replace ${s.name ?? 'bot'}` : `Seat ${s.seat + 1}`}
                     </span>
                   </span>
                   <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">

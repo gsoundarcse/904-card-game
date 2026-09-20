@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Ribbons } from '@/components/ribbons'
 import {
@@ -19,13 +20,14 @@ import {
   teamOf,
 } from '@/lib/game'
 import type { Action, PlayerView } from '@/lib/server/rooms'
-import { type Credentials, useThinnai } from '@/lib/client/use-thinnai'
+import { clearCredentials, type Credentials, useThinnai } from '@/lib/client/use-thinnai'
 import { GameTable, type SeatView } from '@/components/game-table'
 import { CardBack, CardFace, ClickableCard } from '@/components/playing-card'
 import { StrongSupport } from '@/components/strong-support'
 
 export function ThinnaiRoom({ roomId, creds }: { roomId: string; creds: Credentials }) {
   const { view, error, pending, send, clearError } = useThinnai(roomId, creds)
+  const router = useRouter()
 
   if (!view) {
     return (
@@ -35,8 +37,30 @@ export function ThinnaiRoom({ roomId, creds }: { roomId: string; creds: Credenti
     )
   }
 
+  async function goHome() {
+    if (!window.confirm(view!.status === 'lobby' ? 'Leave this thinnai?' : 'Leave the table? A bot will take your seat.')) {
+      return
+    }
+    const ok = await send({ type: 'leaveRoom' })
+    if (ok) {
+      clearCredentials(roomId)
+      router.push('/')
+    }
+  }
+
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-5xl flex-col gap-4 px-3 py-4 sm:px-6 sm:py-6">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={goHome}
+          disabled={pending}
+          className="rounded-xl border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground transition-colors hover:border-destructive hover:text-destructive disabled:opacity-40"
+        >
+          ← Home
+        </button>
+      </div>
+
       <MatchHeader view={view} />
 
       {error && (
