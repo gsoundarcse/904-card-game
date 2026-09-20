@@ -9,7 +9,8 @@ export async function POST(request: Request) {
     const session = await auth()
     const body = await request.json()
     const seatCount = Number(body?.seatCount)
-    const { room, player } = createRoom(seatCount, String(body?.hostName ?? ''), session?.user?.id)
+    const seatPlan = Array.isArray(body?.seatPlan) ? (body.seatPlan as ('bot' | 'invite')[]) : undefined
+    const { room, player } = createRoom(seatCount, String(body?.hostName ?? ''), session?.user?.id, seatPlan)
     return NextResponse.json({
       roomId: room.id,
       playerId: player.id,

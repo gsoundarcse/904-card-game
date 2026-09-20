@@ -4,6 +4,7 @@ import {
   cardLimit,
   CLAIM_STEP,
   type Card,
+  chooseBotCard,
   evaluateTrick,
   getPlayable,
   LADDER_MAX_CLAIM,
@@ -41,6 +42,8 @@ export interface RoomPlayer {
   lastSeen: number
   /** Set when the player was logged in at create/join time — lets results be tracked against their account. */
   userId?: string
+  /** Bots are seated immediately at creation and play themselves; see scheduleBotTurn. */
+  isBot?: boolean
 }
 
 export interface CompletedTrick {
@@ -57,6 +60,8 @@ export interface Room {
   status: RoomStatus
   hostId: string
   players: RoomPlayer[]
+  /** Per-seat plan set at creation. A 'bot' seat is filled immediately; a 'human' seat waits for someone to join. */
+  seatPlan: ('human' | 'bot')[]
 
   match: {
     roundNumber: number
@@ -153,9 +158,19 @@ function emptyRound(seatCount: number): Room['round'] {
   }
 }
 
-export function createRoom(seatCount: number, hostName: string, hostUserId?: string) {
+export function createRoom(
+  seatCount: number,
+  hostName: string,
+  hostUserId?: string,
+  seatPlan?: ('bot' | 'invite')[],
+) {
   sweep()
   if (seatCount !== 4 && seatCount !== 6) throw new ActionError('Table size must be 4 or 6')
+
+  const plan = seatPlan ?? Array(seatCount - 1).fill('invite')
+  if (plan.length !== seatCount - 1 || plan.some((role) => role !== 'bot' && role !== 'invite')) {
+    throw new ActionError('Invalid seat plan')
+  }
 
   let id = roomId()
   while (ROOMS.has(id)) id = roomId()
@@ -169,6 +184,21 @@ export function createRoom(seatCount: number, hostName: string, hostUserId?: str
     userId: hostUserId,
   }
 
+  const players: RoomPlayer[] = [host]
+  let botNumber = 0
+  plan.forEach((role, i) => {
+    if (role !== 'bot') return
+    botNumber += 1
+    players.push({
+      id: token(),
+      secret: token(),
+      name: `Bot ${botNumber}`,
+      seat: i + 1,
+      lastSeen: Date.now(),
+      isBot: true,
+    })
+  })
+
   const room: Room = {
     id,
     version: 1,
@@ -176,7 +206,8 @@ export function createRoom(seatCount: number, hostName: string, hostUserId?: str
     seatCount,
     status: 'lobby',
     hostId: host.id,
-    players: [host],
+    players,
+    seatPlan: ['human', ...plan.map((role) => (role === 'bot' ? 'bot' : 'human'))],
     match: { roundNumber: 1, teamCards: [0, 0], cardLimit: cardLimit(seatCount), loser: null },
     round: emptyRound(seatCount),
   }
@@ -201,13 +232,21 @@ export function joinRoom(id: string, name: string, userId?: string) {
   const room = ROOMS.get(id)
   if (!room) throw new ActionError('That thinnai does not exist')
   if (room.status !== 'lobby') throw new ActionError('That match has already started')
-  if (room.players.length >= room.seatCount) throw new ActionError('That thinnai is full')
+
+  let seat = -1
+  for (let s = 0; s < room.seatCount; s++) {
+    if (room.seatPlan[s] === 'human' && !room.players.some((p) => p.seat === s)) {
+      seat = s
+      break
+    }
+  }
+  if (seat === -1) throw new ActionError('That thinnai is full')
 
   const player: RoomPlayer = {
     id: token(),
     secret: token(),
     name: cleanName(name),
-    seat: room.players.length,
+    seat,
     lastSeen: Date.now(),
     userId,
   }
@@ -293,7 +332,61 @@ export function applyAction(id: string, playerId: string, secret: string, action
 
   room.version++
   recordMetric('actionsAccepted', { action: action.type })
+  scheduleBotTurn(room)
   return room
+}
+
+// ---------------------------------------------------------------------------
+// Bots
+//
+// A bot seat plays itself: whenever it becomes the current turn, a short
+// timer fires the same simple strategy used for local pass-and-play bots
+// (lib/game.ts#chooseBotCard) — bid the minimum or pass, bury the first card
+// as trump, otherwise play by chooseBotCard. Chained so a run of consecutive
+// bot seats plays out without any human action in between.
+// ---------------------------------------------------------------------------
+
+const BOT_TURN_DELAY_MS = 700
+
+function scheduleBotTurn(room: Room) {
+  if (room.status !== 'bidding' && room.status !== 'trump' && room.status !== 'playing') return
+  const bot = room.players.find((p) => p.seat === room.round.current && p.isBot)
+  if (!bot) return
+
+  const roomId = room.id
+  const atVersion = room.version
+  setTimeout(() => {
+    const current = ROOMS.get(roomId)
+    if (!current || current.version !== atVersion) return
+    performBotTurn(current)
+  }, BOT_TURN_DELAY_MS)
+}
+
+function performBotTurn(room: Room) {
+  const bot = room.players.find((p) => p.seat === room.round.current && p.isBot)
+  if (!bot) return
+  const r = room.round
+  try {
+    if (room.status === 'bidding') {
+      if (r.highBid === 0) doBid(room, bot, MIN_CLAIM)
+      else doPass(room, bot)
+    } else if (room.status === 'trump') {
+      const card = r.hands[bot.seat][0]
+      if (card) doSelectTrump(room, bot, card.id)
+    } else if (room.status === 'playing') {
+      const playable = getPlayable(r.hands[bot.seat], r.trick, r.trumpRevealed)
+      const card = chooseBotCard(r.hands[bot.seat], playable.playableIds, r.trick, r.trumpSuit, r.trumpRevealed, bot.seat)
+      if (card) doPlayCard(room, bot, card.id, false)
+    }
+  } catch {
+    // A bot move should never legitimately be rejected. If room state moved
+    // on under it for some other reason, just stop rather than throw from a
+    // background timer.
+    return
+  }
+  room.version++
+  recordMetric('actionsAccepted', { action: 'bot' })
+  scheduleBotTurn(room)
 }
 
 function doStart(room: Room, player: RoomPlayer) {
@@ -503,7 +596,7 @@ export interface PlayerView {
   seatCount: number
   youAreHost: boolean
   yourSeat: number
-  players: { name: string; seat: number; team: 0 | 1; handCount: number; connected: boolean }[]
+  players: { name: string; seat: number; team: 0 | 1; handCount: number; connected: boolean; isBot: boolean }[]
   match: Room['match']
   round: {
     dealer: number
@@ -568,7 +661,8 @@ export function viewFor(room: Room, playerId: string): PlayerView {
         seat: p.seat,
         team: teamOf(p.seat),
         handCount: (r.hands[p.seat] ?? []).length,
-        connected: now - p.lastSeen < CONNECTED_WINDOW_MS,
+        connected: p.isBot ? true : now - p.lastSeen < CONNECTED_WINDOW_MS,
+        isBot: p.isBot === true,
       })),
     match: room.match,
     round: {

@@ -173,6 +173,11 @@ function Lobby({
                 {p && seat === view.yourSeat && (
                   <span className="rounded-full bg-gold px-2 py-0.5 text-[9px] font-bold uppercase text-primary-foreground">you</span>
                 )}
+                {p?.isBot && (
+                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">
+                    bot
+                  </span>
+                )}
               </span>
               <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">P{seat + 1}</span>
             </li>
