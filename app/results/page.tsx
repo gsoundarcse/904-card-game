@@ -12,6 +12,12 @@ export default async function ResultsPage() {
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col gap-10 px-4 py-12">
+      <Link
+        href="/"
+        className="self-start rounded-xl border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground transition-colors hover:border-gold hover:text-gold"
+      >
+        ← Home
+      </Link>
       <header className="text-center">
         <p className="mb-2 font-mono text-xs uppercase tracking-[0.35em] text-gold">Thinnai</p>
         <h1 className="font-serif text-5xl font-bold tracking-tight text-gold-soft">Results</h1>
