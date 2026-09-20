@@ -4,4 +4,4 @@
 - [Gameplay](GAMEPLAY.md)
 - [UX and Testing](UX-TESTING.md)
 
-Product: Thinnai. 904 is playable now; Rani is Coming soon.
+Product: Thinnai — a single online room flow, 4 or 6 seats, human or bot.
