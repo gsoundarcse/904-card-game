@@ -18,6 +18,7 @@ import {
   settleRound,
   shuffle,
   sortHand,
+  suggestTrumpCard,
   type Suit,
 
   teamOf,
@@ -426,10 +427,23 @@ function performBotTurn(room: Room) {
   const r = room.round
   try {
     if (room.status === 'bidding') {
-      if (r.highBid === 0) doBid(room, bot, MIN_CLAIM)
-      else doPass(room, bot)
+      if (r.highBid === 0) {
+        doBid(room, bot, MIN_CLAIM)
+      } else {
+        // Outbid a standing claim with a genuinely strong hand instead of always
+        // folding — a hand well above the per-seat average share of the deck's
+        // points is worth contesting, up to the ceiling.
+        const totalPoints = room.seatCount >= 6 ? 904 : 884
+        const handPoints = r.hands[bot.seat].reduce((sum, card) => sum + card.points, 0)
+        const strongHand = handPoints >= (totalPoints / room.seatCount) * 1.25
+        const nextClaim = minNextClaim(r.highBid)
+        if (strongHand && nextClaim <= MAX_CLAIM) doBid(room, bot, nextClaim)
+        else doPass(room, bot)
+      }
     } else if (room.status === 'trump') {
-      const card = r.hands[bot.seat][0]
+      // Bury the weakest card of the suit the bot holds the most of, same as
+      // the "Suggested" hint humans get, instead of always the first card dealt.
+      const card = suggestTrumpCard(r.hands[bot.seat]) ?? r.hands[bot.seat][0]
       if (card) doSelectTrump(room, bot, card.id)
     } else if (room.status === 'playing') {
       const playable = getPlayable(r.hands[bot.seat], r.trick, r.trumpRevealed, !isSoloRound(room))
