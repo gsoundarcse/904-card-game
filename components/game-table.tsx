@@ -195,8 +195,9 @@ export function GameTable({
         </div>
       )}
 
-      {/* central pile */}
-      <div className="central-pile absolute left-1/2 top-1/2 flex min-h-28 max-w-[72%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-1 rounded-xl border border-white/15 bg-black/15 px-2 py-2 shadow-[inset_0_0_24px_rgba(0,0,0,0.18)] sm:min-h-40 sm:max-w-[65%] sm:gap-2 sm:rounded-2xl sm:px-5 sm:py-4">
+      {/* central pile — z-30 so played cards always render above the seat markers (z-20),
+          which otherwise cover the pile's outer cards where they share the same vertical band */}
+      <div className="central-pile absolute left-1/2 top-1/2 z-30 flex min-h-28 max-w-[72%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-center justify-center gap-1 rounded-xl border border-white/15 bg-black/15 px-2 py-2 shadow-[inset_0_0_24px_rgba(0,0,0,0.18)] sm:min-h-40 sm:max-w-[65%] sm:gap-2 sm:rounded-2xl sm:px-5 sm:py-4">
         {trick.length === 0 || (completedTrick && !completedVisible) ? (
           <span className="font-serif text-sm italic text-foreground/50">
             {banner ? '' : 'The pile is empty'}
