@@ -3,7 +3,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Ribbons } from '@/components/ribbons'
-import { CLAIM_STEP, MAX_CLAIM, SUIT_SYMBOL, SUITS, type Suit, teamLabel, teamOf, defendingTarget } from '@/lib/game'
+import {
+  CLAIM_STEP,
+  decrementClaim,
+  defendingTarget,
+  incrementClaim,
+  isSoloClaim,
+  isValidClaimAmount,
+  MAX_CLAIM,
+  SUIT_SYMBOL,
+  SUITS,
+  type Suit,
+  teamLabel,
+  teamOf,
+} from '@/lib/game'
 import type { Action, PlayerView } from '@/lib/server/rooms'
 import { type Credentials, useThinnai } from '@/lib/client/use-thinnai'
 import { GameTable, type SeatView } from '@/components/game-table'
@@ -90,7 +103,13 @@ function MatchHeader({ view }: { view: PlayerView }) {
           <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Trump</span>
           <span className="text-sm font-semibold text-foreground">
             {!view.round.trumpSuit ? (
-              view.round.claimer === null ? '—' : <span className="text-gold">Hidden ?</span>
+              view.round.claimer === null ? (
+                '—'
+              ) : isSoloClaim(view.round.claim) ? (
+                <span className="text-gold">No trump · solo</span>
+              ) : (
+                <span className="text-gold">Hidden ?</span>
+              )
             ) : (
               <span
                 className={cn(
@@ -220,6 +239,7 @@ function Table({
 }) {
   const r = view.round
   const yourTurn = r.current === view.yourSeat
+  const solo = r.claimer !== null && isSoloClaim(r.claim)
   const playable = useMemo(() => new Set(view.playableIds), [view.playableIds])
 
   const seats: SeatView[] = view.players.map((p) => {
@@ -229,6 +249,8 @@ function Table({
       else if (r.bids[p.seat] != null) status = `Bid ${r.bids[p.seat]}`
       else if (p.seat === r.current) status = 'Deciding'
       else status = 'Waiting'
+    } else if (view.status === 'playing' && solo && r.claimer !== null && p.seat !== r.claimer && p.team === teamOf(r.claimer)) {
+      status = 'Sitting Out'
     } else if (view.status === 'playing' && p.seat === r.current) {
       status = 'Turn'
     } else if (!p.connected) {
@@ -368,23 +390,28 @@ function BidControls({
   pending: boolean
 }) {
   const [amount, setAmount] = useState(view.minBid)
-  useEffect(() => setAmount(view.minBid), [view.minBid])
+  const [amountText, setAmountText] = useState(String(view.minBid))
+  useEffect(() => {
+    setAmount(view.minBid)
+    setAmountText(String(view.minBid))
+  }, [view.minBid])
+  useEffect(() => setAmountText(String(amount)), [amount])
 
-  const canBid = view.minBid <= MAX_CLAIM && Number.isInteger(amount) && amount % CLAIM_STEP === 0 && amount >= view.minBid
+  const canBid = view.minBid <= MAX_CLAIM && isValidClaimAmount(amount) && amount >= view.minBid
   const bidError = canBid
     ? null
     : amount > MAX_CLAIM
       ? `Maximum claim is ${MAX_CLAIM}.`
       : amount < view.minBid
         ? `Claim must be at least ${view.minBid}.`
-        : `Claim must be a whole number in steps of ${CLAIM_STEP}.`
+        : `Claim must be a whole number in steps of ${CLAIM_STEP}, or exactly ${MAX_CLAIM} to go solo.`
 
   return (
     <div className="mobile-bid-controls sticky bottom-2 z-30 mt-3 flex flex-wrap items-center justify-center gap-3 rounded-xl border border-border bg-secondary/95 px-2 pb-2 pt-3 shadow-xl backdrop-blur md:static md:rounded-none md:border-0 md:bg-transparent md:px-0 md:pb-0 md:shadow-none md:backdrop-blur-0">
       <div className="flex items-center gap-2 rounded-xl border border-border bg-background/40 px-2 py-1">
         <button
           type="button"
-          onClick={() => setAmount((v) => Math.max(view.minBid, v - CLAIM_STEP))}
+          onClick={() => setAmount((v) => Math.max(view.minBid, decrementClaim(v)))}
           disabled={amount <= view.minBid}
           className="h-8 w-8 rounded-lg bg-secondary text-lg font-bold text-foreground disabled:opacity-30"
           aria-label="Decrease bid"
@@ -396,10 +423,14 @@ function BidControls({
           min={view.minBid}
           max={MAX_CLAIM}
           step={CLAIM_STEP}
-          value={amount}
+          value={amountText}
           onChange={(event) => {
             const digits = event.target.value.replace(/\D/g, '').slice(0, 3)
-            setAmount(digits ? Number(digits) : view.minBid)
+            setAmountText(digits)
+            if (digits) setAmount(Number(digits))
+          }}
+          onBlur={() => {
+            if (!amountText) setAmountText(String(amount))
           }}
           className={cn(
             'w-20 bg-transparent text-center font-serif text-2xl font-bold outline-none',
@@ -410,7 +441,7 @@ function BidControls({
         />
         <button
           type="button"
-          onClick={() => setAmount((v) => Math.min(MAX_CLAIM, v + CLAIM_STEP))}
+          onClick={() => setAmount((v) => Math.min(MAX_CLAIM, incrementClaim(v)))}
           disabled={amount >= MAX_CLAIM}
           className="h-8 w-8 rounded-lg bg-secondary text-lg font-bold text-foreground disabled:opacity-30"
           aria-label="Increase bid"
@@ -424,7 +455,7 @@ function BidControls({
         disabled={pending || !canBid}
         className="rounded-xl bg-gold px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40"
       >
-        Claim {amount}
+        {isSoloClaim(amount) ? 'Claim it all — 904 solo' : `Claim ${amount}`}
       </button>
       <button
         type="button"

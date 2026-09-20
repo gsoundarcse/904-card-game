@@ -277,11 +277,13 @@ describe('bidding', () => {
 
   it('enforces the step and the ceiling', () => {
     const t = dealtTable(4)
-    const first = t.room().round.current
-    rejects(() => t.act(first, { type: 'bid', amount: 505 }), /steps of 10/)
-    rejects(() => t.act(first, { type: 'bid', amount: 910 }), /Maximum bid/)
-    rejects(() => t.act(first, { type: 'bid', amount: 904 }), /Maximum bid/)
-    rejects(() => t.act(first, { type: 'bid', amount: 500.5 }), /whole number/)
+    const seat = t.room().round.current
+    rejects(() => t.act(seat, { type: 'bid', amount: 505 }), /steps of 10/)
+    rejects(() => t.act(seat, { type: 'bid', amount: 910 }), /Maximum bid/)
+    rejects(() => t.act(seat, { type: 'bid', amount: 500.5 }), /whole number/)
+    // 904 is the one exception to "steps of 10" — the solo claim.
+    t.act(seat, { type: 'bid', amount: 904 })
+    assert.equal(t.room().round.highBid, 904)
   })
 
   it('makes each bid beat the last by the step', () => {

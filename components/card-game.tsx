@@ -73,6 +73,7 @@ export function CardGame() {
   const [highBid, setHighBid] = useState(0)
   const [highBidder, setHighBidder] = useState<number | null>(null)
   const [pendingBid, setPendingBid] = useState(MIN_CLAIM)
+  const [pendingBidText, setPendingBidText] = useState(String(MIN_CLAIM))
 
   // claim / trump
   const [claimer, setClaimer] = useState<number | null>(null)
@@ -215,6 +216,10 @@ export function CardGame() {
     if (phase !== 'bidding') return
     setPendingBid(minNextClaim(highBid))
   }, [phase, current, highBid])
+
+  // Keep the input's text in sync whenever the numeric bid changes from
+  // anywhere other than direct typing (the +/- buttons, a new bidder, etc).
+  useEffect(() => setPendingBidText(String(pendingBid)), [pendingBid])
 
   const finalizeClaimer = useCallback((seat: number, amount: number) => {
     setClaimer(seat)
@@ -666,10 +671,14 @@ export function CardGame() {
                 min={minAllowed}
                 max={MAX_CLAIM}
                 step={CLAIM_STEP}
-                value={pendingBid}
+                value={pendingBidText}
                 onChange={(event) => {
                   const digits = event.target.value.replace(/\D/g, '').slice(0, 3)
-                  setPendingBid(digits ? Number(digits) : MIN_CLAIM)
+                  setPendingBidText(digits)
+                  if (digits) setPendingBid(Number(digits))
+                }}
+                onBlur={() => {
+                  if (!pendingBidText) setPendingBidText(String(pendingBid))
                 }}
                 className={cn(
                   'w-20 bg-transparent text-center font-serif text-2xl font-bold outline-none',

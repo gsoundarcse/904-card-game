@@ -1,4 +1,5 @@
 import {
+  activeSeats,
   buildDeck,
   CARDS_PER_PLAYER,
   cardLimit,
@@ -7,8 +8,12 @@ import {
   chooseBotCard,
   evaluateTrick,
   getPlayable,
-  LADDER_MAX_CLAIM,
+  isSoloClaim,
+  isValidClaimAmount,
+  MAX_CLAIM,
   MIN_CLAIM,
+  minNextClaim,
+  nextActiveSeat,
   type Settlement,
   settleRound,
   shuffle,
@@ -374,7 +379,7 @@ function performBotTurn(room: Room) {
       const card = r.hands[bot.seat][0]
       if (card) doSelectTrump(room, bot, card.id)
     } else if (room.status === 'playing') {
-      const playable = getPlayable(r.hands[bot.seat], r.trick, r.trumpRevealed)
+      const playable = getPlayable(r.hands[bot.seat], r.trick, r.trumpRevealed, !isSoloRound(room))
       const card = chooseBotCard(r.hands[bot.seat], playable.playableIds, r.trick, r.trumpSuit, r.trumpRevealed, bot.seat)
       if (card) doPlayCard(room, bot, card.id, false)
     }
@@ -398,11 +403,14 @@ function doStart(room: Room, player: RoomPlayer) {
   dealRound(room, Math.floor(Math.random() * room.seatCount))
 }
 
-// Online rooms don't yet implement the 904 solo claim (partner sitting out,
-// no trump, etc.) so the bidding ladder stops at its normal ceiling here.
+/** Smallest amount that legally out-bids the current high bid — 900 jumps straight to the 904 solo claim. */
 function minAllowed(room: Room): number {
-  const { highBid } = room.round
-  return Math.min(LADDER_MAX_CLAIM, highBid > 0 ? highBid + CLAIM_STEP : MIN_CLAIM)
+  return minNextClaim(room.round.highBid)
+}
+
+/** True once a solo (904) claim has been made — the claimer's partner sits out for the rest of the round. */
+function isSoloRound(room: Room): boolean {
+  return room.round.claimer !== null && isSoloClaim(room.round.claim)
 }
 
 /** One lap only: when every seat has acted, the high bid takes the claim. */
@@ -421,6 +429,19 @@ function advanceBidding(room: Room) {
   }
   r.claimer = r.highBidder
   r.claim = r.highBid
+
+  if (isSoloClaim(r.claim)) {
+    // Solo: no trump at all, and the claimer leads the very first trick alone.
+    r.trumpSuit = null
+    r.trumpCard = null
+    r.selectedTrumpCard = null
+    r.revealedTrumpCard = null
+    r.trumpRevealed = false
+    r.current = r.claimer
+    room.status = 'playing'
+    return
+  }
+
   r.current = r.claimer
   room.status = 'trump'
 }
@@ -429,9 +450,9 @@ function doBid(room: Room, player: RoomPlayer, amount: number) {
   if (room.status !== 'bidding') throw new ActionError('Not bidding')
   requireTurn(room, player)
   if (!Number.isInteger(amount)) throw new ActionError('Bid must be a whole number')
-  if (amount > LADDER_MAX_CLAIM) throw new ActionError(`Maximum bid is ${LADDER_MAX_CLAIM}`)
-  if (amount % CLAIM_STEP !== 0) throw new ActionError(`Bids move in steps of ${CLAIM_STEP}`)
+  if (amount > MAX_CLAIM) throw new ActionError(`Maximum bid is ${MAX_CLAIM}`)
   if (amount < minAllowed(room)) throw new ActionError(`Bid must be at least ${minAllowed(room)}`)
+  if (!isValidClaimAmount(amount)) throw new ActionError(`Bids move in steps of ${CLAIM_STEP}, or exactly ${MAX_CLAIM} to go solo`)
 
   const r = room.round
   r.bids[player.seat] = amount
@@ -486,7 +507,7 @@ function doAskTrump(room: Room, player: RoomPlayer) {
   requireTurn(room, player)
   const r = room.round
   if (r.trumpRevealed) throw new ActionError('Trump is already revealed')
-  const playable = getPlayable(r.hands[player.seat], r.trick, r.trumpRevealed)
+  const playable = getPlayable(r.hands[player.seat], r.trick, r.trumpRevealed, !isSoloRound(room))
   if (!playable.canAskTrump) throw new ActionError('You can only ask when void in the led suit')
 
   r.revealedTrumpCard = r.selectedTrumpCard
@@ -500,11 +521,12 @@ function doPlayCard(room: Room, player: RoomPlayer, cardId: string, double: bool
   requireTurn(room, player)
 
   const r = room.round
+  const solo = isSoloRound(room)
   const hand = r.hands[player.seat]
   const card = hand.find((c) => c.id === cardId)
   if (!card) throw new ActionError('You do not hold that card')
 
-  const playable = getPlayable(hand, r.trick, r.trumpRevealed)
+  const playable = getPlayable(hand, r.trick, r.trumpRevealed, !solo)
   if (!playable.playableIds.has(cardId)) throw new ActionError('You must follow the led suit')
 
   if (double) {
@@ -528,8 +550,9 @@ function doPlayCard(room: Room, player: RoomPlayer, cardId: string, double: bool
   r.trick.push({ player: player.seat, card })
   r.lastTrick = null
 
-  if (r.trick.length < room.seatCount) {
-    r.current = (player.seat + 1) % room.seatCount
+  const seatsThisTrick = activeSeats(room.seatCount, r.claimer ?? 0, solo).length
+  if (r.trick.length < seatsThisTrick) {
+    r.current = nextActiveSeat(player.seat, room.seatCount, r.claimer ?? 0, solo)
     return
   }
 
@@ -638,9 +661,10 @@ export function viewFor(room: Room, playerId: string): PlayerView {
   if (!me) throw new ActionError('You are not seated at this thinnai')
 
   const r = room.round
+  const solo = isSoloRound(room)
   const inPlay = room.status === 'playing' && r.current === me.seat
   const myHand = r.hands[me.seat] ?? []
-  const playable = inPlay ? getPlayable(myHand, r.trick, r.trumpRevealed) : null
+  const playable = inPlay ? getPlayable(myHand, r.trick, r.trumpRevealed, !solo) : null
 
   // The claimer knows the trump because they chose it. Everyone else waits.
   const trumpVisible = r.trumpRevealed || r.claimer === me.seat
@@ -694,6 +718,7 @@ export function viewFor(room: Room, playerId: string): PlayerView {
     canAskTrump: playable?.canAskTrump === true,
     canCallDouble:
       inPlay &&
+      !solo &&
       r.claimer === me.seat &&
       myHand.length === 1 &&
       !r.trumpCard &&
