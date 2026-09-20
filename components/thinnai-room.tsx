@@ -473,13 +473,13 @@ function BidControls({
         : `Claim must be a whole number in steps of ${CLAIM_STEP}, or exactly ${MAX_CLAIM} to go solo.`
 
   return (
-    <div className="mobile-bid-controls sticky bottom-2 z-30 mt-3 flex flex-wrap items-center justify-center gap-3 rounded-xl border border-border bg-secondary/95 px-2 pb-2 pt-3 shadow-xl backdrop-blur md:static md:rounded-none md:border-0 md:bg-transparent md:px-0 md:pb-0 md:shadow-none md:backdrop-blur-0">
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-background/40 px-2 py-1">
+    <div className="mobile-bid-controls sticky bottom-2 z-30 mt-3 flex flex-wrap items-center justify-center gap-1.5 rounded-xl border border-border bg-secondary/95 px-2 pb-2 pt-3 shadow-xl backdrop-blur sm:gap-3 md:static md:rounded-none md:border-0 md:bg-transparent md:px-0 md:pb-0 md:shadow-none md:backdrop-blur-0">
+      <div className="flex items-center gap-1 rounded-xl border border-border bg-background/40 px-1.5 py-1 sm:gap-2 sm:px-2">
         <button
           type="button"
           onClick={() => setAmount((v) => Math.max(view.minBid, decrementClaim(v)))}
           disabled={amount <= view.minBid}
-          className="h-8 w-8 rounded-lg bg-secondary text-lg font-bold text-foreground disabled:opacity-30"
+          className="h-7 w-7 shrink-0 rounded-lg bg-secondary text-base font-bold text-foreground disabled:opacity-30 sm:h-8 sm:w-8 sm:text-lg"
           aria-label="Decrease bid"
         >
           &minus;
@@ -499,7 +499,7 @@ function BidControls({
             if (!amountText) setAmountText(String(amount))
           }}
           className={cn(
-            'w-20 bg-transparent text-center font-serif text-2xl font-bold outline-none',
+            'w-12 bg-transparent text-center font-serif text-lg font-bold outline-none sm:w-20 sm:text-2xl',
             canBid ? 'text-gold-soft' : 'text-destructive',
           )}
           aria-invalid={!canBid}
@@ -509,7 +509,7 @@ function BidControls({
           type="button"
           onClick={() => setAmount((v) => Math.min(MAX_CLAIM, incrementClaim(v)))}
           disabled={amount >= MAX_CLAIM}
-          className="h-8 w-8 rounded-lg bg-secondary text-lg font-bold text-foreground disabled:opacity-30"
+          className="h-7 w-7 shrink-0 rounded-lg bg-secondary text-base font-bold text-foreground disabled:opacity-30 sm:h-8 sm:w-8 sm:text-lg"
           aria-label="Increase bid"
         >
           +
@@ -519,7 +519,7 @@ function BidControls({
         type="button"
         onClick={() => send({ type: 'bid', amount })}
         disabled={pending || !canBid}
-        className="rounded-xl bg-gold px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40"
+        className="shrink-0 rounded-xl bg-gold px-3 py-2 text-xs font-bold uppercase tracking-wide text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-40 sm:px-6 sm:py-2.5 sm:text-sm"
       >
         {isSoloClaim(amount) ? 'Claim it all — 904 solo' : `Claim ${amount}`}
       </button>
@@ -527,7 +527,7 @@ function BidControls({
         type="button"
         onClick={() => send({ type: 'pass' })}
         disabled={pending || view.mustClaim}
-        className="rounded-xl border border-border px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-foreground transition-colors hover:border-destructive hover:text-destructive disabled:opacity-30"
+        className="shrink-0 rounded-xl border border-border px-3 py-2 text-xs font-bold uppercase tracking-wide text-foreground transition-colors hover:border-destructive hover:text-destructive disabled:opacity-30 sm:px-6 sm:py-2.5 sm:text-sm"
       >
         Pass
       </button>
