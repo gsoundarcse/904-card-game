@@ -8,6 +8,12 @@ export type MetricName =
   | 'clientErrors'
   | 'serverErrors'
 
+export interface RecentError {
+  at: string
+  message: string
+  digest?: string
+}
+
 export interface MetricsSnapshot {
   startedAt: string
   uptimeSeconds: number
@@ -19,12 +25,18 @@ export interface MetricsSnapshot {
   roundsCompleted: number
   clientErrors: number
   serverErrors: number
+  recentClientErrors: RecentError[]
+  recentServerErrors: RecentError[]
 }
 
 type TelemetryStore = {
   startedAt: number
   counters: Record<MetricName, number>
+  recentClientErrors: RecentError[]
+  recentServerErrors: RecentError[]
 }
+
+const RECENT_ERRORS_LIMIT = 20
 
 const globalStore = globalThis as unknown as { __thinnaiTelemetry?: TelemetryStore }
 const STORE: TelemetryStore = (globalStore.__thinnaiTelemetry ??= {
@@ -39,6 +51,8 @@ const STORE: TelemetryStore = (globalStore.__thinnaiTelemetry ??= {
     clientErrors: 0,
     serverErrors: 0,
   },
+  recentClientErrors: [],
+  recentServerErrors: [],
 })
 
 export function recordMetric(name: MetricName, detail?: Record<string, string | number | boolean>) {
@@ -50,6 +64,15 @@ export function recordMetric(name: MetricName, detail?: Record<string, string | 
       ...detail,
     }))
   }
+  if (name === 'clientErrors' || name === 'serverErrors') {
+    const bucket = name === 'clientErrors' ? STORE.recentClientErrors : STORE.recentServerErrors
+    bucket.unshift({
+      at: new Date().toISOString(),
+      message: typeof detail?.message === 'string' ? detail.message : name,
+      digest: typeof detail?.digest === 'string' ? detail.digest : undefined,
+    })
+    bucket.length = Math.min(bucket.length, RECENT_ERRORS_LIMIT)
+  }
 }
 
 export function metricsSnapshot(): MetricsSnapshot {
@@ -57,5 +80,7 @@ export function metricsSnapshot(): MetricsSnapshot {
     startedAt: new Date(STORE.startedAt).toISOString(),
     uptimeSeconds: Math.floor((Date.now() - STORE.startedAt) / 1000),
     ...STORE.counters,
+    recentClientErrors: STORE.recentClientErrors,
+    recentServerErrors: STORE.recentServerErrors,
   }
 }

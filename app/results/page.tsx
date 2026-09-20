@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { teamLabel } from '@/lib/game'
-import { getLeaderboard, getRecentMatches } from '@/lib/server/match-history'
+import { getLeaderboard, getRecentMatches, getTotalMatchesPlayed } from '@/lib/server/match-history'
+import { metricsSnapshot } from '@/lib/server/telemetry'
 import { cn } from '@/lib/utils'
 
 export default async function ResultsPage() {
@@ -11,6 +12,8 @@ export default async function ResultsPage() {
 
   const leaderboard = getLeaderboard()
   const matches = getRecentMatches()
+  const totalGamesPlayed = getTotalMatchesPlayed()
+  const metrics = metricsSnapshot()
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col gap-10 px-4 py-12">
@@ -21,6 +24,62 @@ export default async function ResultsPage() {
           Logged in as <span className="font-semibold text-foreground">{session.user.name}</span>
         </p>
       </header>
+
+      <section>
+        <h2 className="mb-3 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Server metrics</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: 'Games played', value: totalGamesPlayed },
+            { label: 'Rooms created', value: metrics.roomsCreated },
+            { label: 'Rounds completed', value: metrics.roundsCompleted },
+            { label: 'Actions rejected', value: metrics.actionsRejected },
+            { label: 'Client crashes', value: metrics.clientErrors },
+            { label: 'Server errors', value: metrics.serverErrors },
+            { label: 'Uptime (min)', value: Math.floor(metrics.uptimeSeconds / 60) },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-2xl border border-border bg-secondary/30 p-4 text-center">
+              <p className="font-serif text-2xl font-bold text-gold-soft">{stat.value}</p>
+              <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+          Counters other than games played reset when the server restarts (process-local telemetry).
+        </p>
+
+        {(metrics.recentClientErrors.length > 0 || metrics.recentServerErrors.length > 0) && (
+          <div className="mt-4 flex flex-col gap-3">
+            {metrics.recentClientErrors.length > 0 && (
+              <div className="rounded-2xl border border-border bg-secondary/30 p-4">
+                <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Recent client crashes
+                </p>
+                <ul className="flex flex-col gap-1 text-sm">
+                  {metrics.recentClientErrors.map((e, i) => (
+                    <li key={i} className="text-muted-foreground">
+                      <span className="font-mono text-[10px]">{new Date(e.at).toLocaleString()}</span> — {e.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {metrics.recentServerErrors.length > 0 && (
+              <div className="rounded-2xl border border-border bg-secondary/30 p-4">
+                <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Recent server errors
+                </p>
+                <ul className="flex flex-col gap-1 text-sm">
+                  {metrics.recentServerErrors.map((e, i) => (
+                    <li key={i} className="text-muted-foreground">
+                      <span className="font-mono text-[10px]">{new Date(e.at).toLocaleString()}</span> — {e.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       <section>
         <h2 className="mb-3 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Leaderboard</h2>

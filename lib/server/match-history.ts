@@ -65,6 +65,12 @@ export function getLeaderboard(limit = 50): LeaderboardEntry[] {
     .all(limit) as unknown as LeaderboardEntry[]
 }
 
+/** Total completed matches, all-time — durable across restarts (unlike the in-memory telemetry counters). */
+export function getTotalMatchesPlayed(): number {
+  const row = db.prepare(`SELECT COUNT(*) AS count FROM matches`).get() as unknown as { count: number }
+  return row.count
+}
+
 export function getRecentMatches(limit = 20): MatchHistoryEntry[] {
   const matches = db
     .prepare(
