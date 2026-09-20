@@ -1,15 +1,10 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { auth } from '@/auth'
 import { teamLabel } from '@/lib/game'
 import { getLeaderboard, getRecentMatches, getTotalMatchesPlayed } from '@/lib/server/match-history'
 import { metricsSnapshot } from '@/lib/server/telemetry'
 import { cn } from '@/lib/utils'
 
 export default async function ResultsPage() {
-  const session = await auth()
-  if (!session?.user) redirect('/login?callbackUrl=/results')
-
   const leaderboard = getLeaderboard()
   const matches = getRecentMatches()
   const totalGamesPlayed = getTotalMatchesPlayed()
@@ -20,9 +15,6 @@ export default async function ResultsPage() {
       <header className="text-center">
         <p className="mb-2 font-mono text-xs uppercase tracking-[0.35em] text-gold">Thinnai</p>
         <h1 className="font-serif text-5xl font-bold tracking-tight text-gold-soft">Results</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Logged in as <span className="font-semibold text-foreground">{session.user.name}</span>
-        </p>
       </header>
 
       <section>

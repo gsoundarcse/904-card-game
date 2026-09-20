@@ -141,8 +141,10 @@ function Lobby({
   pending: boolean
 }) {
   const [copied, setCopied] = useState(false)
+  const [drawing, setDrawing] = useState(false)
   const joinUrl = typeof window === 'undefined' ? '' : `${window.location.origin}/thinnai/${view.roomId}`
   const waiting = view.seatCount - view.players.length
+  const humanCount = view.players.filter((p) => !p.isBot).length
 
   useEffect(() => {
     if (!copied) return
@@ -208,6 +210,21 @@ function Lobby({
       <p className="mt-4 font-mono text-[11px] text-muted-foreground">
         Seats alternate between teams — {teamLabel(0, view.seatCount)} against {teamLabel(1, view.seatCount)}.
       </p>
+
+      {view.youAreHost && humanCount >= 2 && (
+        <button
+          type="button"
+          onClick={() => {
+            setDrawing(true)
+            send({ type: 'shuffleTeams' })
+            setTimeout(() => setDrawing(false), 900)
+          }}
+          disabled={pending || drawing}
+          className="mt-4 w-full rounded-xl border border-gold/50 px-6 py-2.5 text-xs font-bold uppercase tracking-wide text-gold transition-colors hover:bg-gold/10 disabled:opacity-40"
+        >
+          {drawing ? '🂡 🂱 Drawing cards… 🃑 🃁' : 'Shuffle teams — draw red & black'}
+        </button>
+      )}
 
       {view.youAreHost ? (
         <button

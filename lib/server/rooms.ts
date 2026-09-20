@@ -225,6 +225,30 @@ export function getRoom(id: string): Room | null {
   return ROOMS.get(id) ?? null
 }
 
+/** Public, pre-join snapshot of a lobby — enough to render a seat picker without a player id/secret. */
+export interface LobbyPreview {
+  roomId: string
+  seatCount: number
+  status: RoomStatus
+  seats: { seat: number; team: 0 | 1; taken: boolean; name?: string; isBot: boolean }[]
+}
+
+export function getLobbyPreview(id: string): LobbyPreview {
+  const room = ROOMS.get(id)
+  if (!room) throw new ActionError('That thinnai does not exist')
+  const seats = Array.from({ length: room.seatCount }, (_, seat) => {
+    const occupant = room.players.find((p) => p.seat === seat)
+    return {
+      seat,
+      team: teamOf(seat),
+      taken: room.seatPlan[seat] === 'bot' || occupant !== undefined,
+      name: occupant?.name,
+      isBot: room.seatPlan[seat] === 'bot',
+    }
+  })
+  return { roomId: room.id, seatCount: room.seatCount, status: room.status, seats }
+}
+
 export class ActionError extends Error {}
 
 function cleanName(raw: string): string {
@@ -233,25 +257,32 @@ function cleanName(raw: string): string {
   return name
 }
 
-export function joinRoom(id: string, name: string, userId?: string) {
+export function joinRoom(id: string, name: string, userId?: string, seat?: number) {
   const room = ROOMS.get(id)
   if (!room) throw new ActionError('That thinnai does not exist')
   if (room.status !== 'lobby') throw new ActionError('That match has already started')
 
-  let seat = -1
-  for (let s = 0; s < room.seatCount; s++) {
-    if (room.seatPlan[s] === 'human' && !room.players.some((p) => p.seat === s)) {
-      seat = s
-      break
+  let target = -1
+  if (seat !== undefined) {
+    if (!Number.isInteger(seat) || seat < 0 || seat >= room.seatCount) throw new ActionError('That seat does not exist')
+    if (room.seatPlan[seat] !== 'human') throw new ActionError('That seat is taken by a bot')
+    if (room.players.some((p) => p.seat === seat)) throw new ActionError('That seat is already taken')
+    target = seat
+  } else {
+    for (let s = 0; s < room.seatCount; s++) {
+      if (room.seatPlan[s] === 'human' && !room.players.some((p) => p.seat === s)) {
+        target = s
+        break
+      }
     }
   }
-  if (seat === -1) throw new ActionError('That thinnai is full')
+  if (target === -1) throw new ActionError('That thinnai is full')
 
   const player: RoomPlayer = {
     id: token(),
     secret: token(),
     name: cleanName(name),
-    seat,
+    seat: target,
     lastSeen: Date.now(),
     userId,
   }
@@ -292,6 +323,7 @@ function dealRound(room: Room, dealer: number) {
 
 export type Action =
   | { type: 'start' }
+  | { type: 'shuffleTeams' }
   | { type: 'bid'; amount: number }
   | { type: 'pass' }
   | { type: 'selectTrump'; cardId: string }
@@ -308,6 +340,9 @@ export function applyAction(id: string, playerId: string, secret: string, action
     switch (action.type) {
       case 'start':
         doStart(room, player)
+        break
+      case 'shuffleTeams':
+        doShuffleTeams(room, player)
         break
       case 'bid':
         doBid(room, player, action.amount)
@@ -416,6 +451,20 @@ function doStart(room: Room, player: RoomPlayer) {
     throw new ActionError(`Waiting for ${room.seatCount - room.players.length} more player(s)`)
   }
   dealRound(room, Math.floor(Math.random() * room.seatCount))
+}
+
+/** The "card draw": randomly re-seat the human players among the human seat slots — bots stay put. */
+function doShuffleTeams(room: Room, player: RoomPlayer) {
+  if (room.hostId !== player.id) throw new ActionError('Only the host can shuffle teams')
+  if (room.status !== 'lobby') throw new ActionError('Teams can only be shuffled before dealing')
+  const humanSeats = room.seatPlan
+    .map((role, seat) => (role === 'human' ? seat : -1))
+    .filter((seat) => seat !== -1 && room.players.some((p) => p.seat === seat))
+  if (humanSeats.length < 2) throw new ActionError('Need at least two seated players to shuffle')
+
+  const shuffledSeats = shuffle(humanSeats)
+  const seated = humanSeats.map((seat) => room.players.find((p) => p.seat === seat)!)
+  seated.forEach((p, i) => { p.seat = shuffledSeats[i] })
 }
 
 /** Smallest amount that legally out-bids the current high bid — 900 jumps straight to the 904 solo claim. */

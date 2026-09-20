@@ -151,7 +151,7 @@ export function GameTable({
       setCompletedVisible(true)
       return
     }
-    const timer = setTimeout(() => setCompletedVisible(false), 1600)
+    const timer = setTimeout(() => setCompletedVisible(false), 2600)
     return () => clearTimeout(timer)
   }, [completedTrick, trick])
 

@@ -183,6 +183,46 @@ describe('joining', () => {
     const t = dealtTable(4)
     rejects(() => joinRoom(t.id, 'Late'), /already started/)
   })
+
+  it('lets a joiner pick a specific open seat', () => {
+    const { room } = createRoom(4, 'Host')
+    const { player } = joinRoom(room.id, 'Picker', undefined, 2)
+    assert.equal(player.seat, 2)
+  })
+
+  it('rejects picking a seat that is already taken', () => {
+    const { room } = createRoom(4, 'Host')
+    rejects(() => joinRoom(room.id, 'Dupe', undefined, 0), /already taken/)
+  })
+
+  it('rejects picking a bot seat', () => {
+    const { room } = createRoom(4, 'Host', undefined, ['bot', 'invite', 'invite'])
+    rejects(() => joinRoom(room.id, 'Nope', undefined, 1), /bot/)
+  })
+})
+
+describe('shuffling teams', () => {
+  it('reseats every human player among the human seats', () => {
+    const t = seatTable(4)
+    const before = t.bySeat.map((p) => p.id)
+    t.act(0, { type: 'shuffleTeams' })
+    const after = t
+      .room()
+      .players.slice()
+      .sort((a, b) => a.seat - b.seat)
+      .map((p) => p.id)
+    assert.deepEqual(new Set(after), new Set(before))
+  })
+
+  it('only the host may shuffle', () => {
+    const t = seatTable(4)
+    assert.throws(() => t.act(1, { type: 'shuffleTeams' }), /host/)
+  })
+
+  it('refuses to shuffle with fewer than two seated humans', () => {
+    const { room, player: host } = createRoom(4, 'Host', undefined, ['bot', 'invite', 'invite'])
+    assert.throws(() => applyAction(room.id, host.id, host.secret, { type: 'shuffleTeams' }), /at least two/)
+  })
 })
 
 describe('who is allowed to act', () => {
