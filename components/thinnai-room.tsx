@@ -50,18 +50,7 @@ export function ThinnaiRoom({ roomId, creds }: { roomId: string; creds: Credenti
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-5xl flex-col gap-4 px-3 py-4 sm:px-6 sm:py-6">
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={goHome}
-          disabled={pending}
-          className="rounded-xl border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground transition-colors hover:border-destructive hover:text-destructive disabled:opacity-40"
-        >
-          ← Home
-        </button>
-      </div>
-
-      <MatchHeader view={view} />
+      <MatchHeader view={view} onHome={goHome} homePending={pending} />
 
       {error && (
         <button
@@ -84,7 +73,7 @@ export function ThinnaiRoom({ roomId, creds }: { roomId: string; creds: Credenti
 
 // ---------------------------------------------------------------------------
 
-function MatchHeader({ view }: { view: PlayerView }) {
+function MatchHeader({ view, onHome, homePending }: { view: PlayerView; onHome: () => void; homePending: boolean }) {
   const { match, round, seatCount } = view
   const claimTarget = round.claim
   const claimerTeam = round.claimer === null ? null : teamOf(round.claimer)
@@ -92,6 +81,14 @@ function MatchHeader({ view }: { view: PlayerView }) {
   return (
     <div className="flex flex-wrap items-stretch justify-between gap-3">
       <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onHome}
+          disabled={homePending}
+          className="rounded-xl border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground transition-colors hover:border-destructive hover:text-destructive disabled:opacity-40"
+        >
+          ← Home
+        </button>
         {([0, 1] as const).map((t) => (
           <div
             key={t}
@@ -325,6 +322,7 @@ function Table({
         trumpRevealed={r.trumpRevealed}
         trumpPlaced={view.trumpFaceDown || r.trumpRevealed}
         hideBottomSeat
+        viewerSeat={view.yourSeat}
         completedTrick={r.trick.length === 0 && r.lastTrick !== null}
         banner={banner}
       />

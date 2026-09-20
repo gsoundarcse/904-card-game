@@ -504,6 +504,9 @@ function doLeaveRoom(room: Room, player: RoomPlayer) {
   const otherHumans = room.players.filter((p) => p.id !== player.id && !p.isBot)
   if (otherHumans.length === 0) throw new ActionError('You are the only human left — no one to hand the table to')
   player.isBot = true
+  if (room.hostId === player.id) {
+    room.hostId = otherHumans.slice().sort((a, b) => a.seat - b.seat)[0].id
+  }
 }
 
 /** Smallest amount that legally out-bids the current high bid — 900 jumps straight to the 904 solo claim. */

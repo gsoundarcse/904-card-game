@@ -1,22 +1,33 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  activeSeats,
   BIG_BID,
   buildDeck,
   CARDS_PER_PLAYER,
   cardLimit,
   chooseBotCard,
+  CLAIM_STEP,
+  decrementClaim,
   defendingTarget,
   type Card,
   evaluateTrick,
   getPlayable,
+  incrementClaim,
+  isSoloClaim,
+  isValidClaimAmount,
+  LADDER_MAX_CLAIM,
   MAX_CLAIM,
   MIN_CLAIM,
+  minNextClaim,
+  nextActiveSeat,
   RANK_POINTS,
   rankStrength,
   settleRound,
   shuffle,
+  SOLO_CLAIM,
   sortHand,
+  suggestTrumpCard,
   type Suit,
   SUITS,
   teamLabel,
@@ -323,6 +334,75 @@ describe('trickPoints', () => {
 
   it('counts a trick of zero-point cards as zero', () => {
     assert.equal(trickPoints([play(0, 'Spades-8'), play(1, 'Hearts-8')]), 0)
+  })
+})
+
+describe('claim ladder', () => {
+  it('validates the normal step-of-10 range and rejects everything else', () => {
+    assert.equal(isValidClaimAmount(MIN_CLAIM), true)
+    assert.equal(isValidClaimAmount(LADDER_MAX_CLAIM), true)
+    assert.equal(isValidClaimAmount(505), false, 'not a multiple of the step')
+    assert.equal(isValidClaimAmount(MIN_CLAIM - CLAIM_STEP), false, 'below the minimum')
+    assert.equal(isValidClaimAmount(LADDER_MAX_CLAIM + CLAIM_STEP), false, 'above the ladder, not the solo claim')
+  })
+
+  it('treats exactly 904 as the one valid claim outside the step ladder', () => {
+    assert.equal(isSoloClaim(SOLO_CLAIM), true)
+    assert.equal(isValidClaimAmount(SOLO_CLAIM), true)
+    assert.equal(isSoloClaim(900), false)
+  })
+
+  it('minNextClaim climbs by the step and jumps 900 straight to the solo claim', () => {
+    assert.equal(minNextClaim(0), MIN_CLAIM)
+    assert.equal(minNextClaim(520), 530)
+    assert.equal(minNextClaim(LADDER_MAX_CLAIM), SOLO_CLAIM)
+  })
+
+  it('incrementClaim / decrementClaim mirror the same jump at the top of the ladder', () => {
+    assert.equal(incrementClaim(890), 900)
+    assert.equal(incrementClaim(900), SOLO_CLAIM)
+    assert.equal(incrementClaim(SOLO_CLAIM), SOLO_CLAIM, 'cannot go above the solo claim')
+    assert.equal(decrementClaim(SOLO_CLAIM), LADDER_MAX_CLAIM)
+    assert.equal(decrementClaim(600), 590)
+  })
+})
+
+describe('activeSeats and nextActiveSeat (solo claims)', () => {
+  it('includes every seat when the round is not solo', () => {
+    assert.deepEqual(activeSeats(4, 0, false), [0, 1, 2, 3])
+  })
+
+  it('drops the claimer\'s teammates from the active seats in a solo claim', () => {
+    // Claimer at seat 0 (team A) — seat 2 is their teammate and sits out.
+    assert.deepEqual(activeSeats(4, 0, true), [0, 1, 3])
+  })
+
+  it('nextActiveSeat skips idle teammates but keeps normal seats untouched', () => {
+    assert.equal(nextActiveSeat(3, 4, 0, true), 0, 'wraps back to the claimer')
+    assert.equal(nextActiveSeat(0, 4, 0, true), 1, 'seat 1 is not the claimer\'s team')
+    assert.equal(nextActiveSeat(1, 4, 0, true), 3, 'seat 2 is skipped, it is the idle teammate')
+    assert.equal(nextActiveSeat(3, 4, 0, false), 0, 'no skipping outside solo claims')
+  })
+})
+
+describe('suggestTrumpCard', () => {
+  it('returns null for an empty hand', () => {
+    assert.equal(suggestTrumpCard([]), null)
+  })
+
+  it('picks the lowest-point card from the suit held the most', () => {
+    // Three spades (long suit) vs one heart — must suggest from spades.
+    const suggestion = suggestTrumpCard(hand('Spades-2', 'Spades-8', 'Spades-A', 'Hearts-J'))
+    assert.equal(suggestion?.suit, 'Spades')
+    assert.equal(suggestion?.rank, '8', 'the zero-point 8 is the cheapest spade to give up')
+  })
+
+  it('keeps the first-seen suit when two suits tie for longest', () => {
+    // Two spades and two hearts tie at length 2; spades appear first in the
+    // hand, so the suggestion must come from spades, not hearts.
+    const suggestion = suggestTrumpCard(hand('Spades-2', 'Spades-8', 'Hearts-9', 'Hearts-K'))
+    assert.equal(suggestion?.suit, 'Spades')
+    assert.equal(suggestion?.rank, '8', 'still the cheapest card within that suit')
   })
 })
 

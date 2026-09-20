@@ -116,6 +116,7 @@ export function GameTable({
   trumpPlaced,
   hideBottomSeat = false,
   completedTrick = false,
+  viewerSeat = 0,
   banner,
 }: {
   seats: SeatView[]
@@ -131,6 +132,8 @@ export function GameTable({
    */
   trumpPlaced?: boolean
   hideBottomSeat?: boolean
+  /** Which absolute seat is rotated to the bottom position — the viewing player's own seat, online. */
+  viewerSeat?: number
   banner: string | null
 }) {
   const [trumpDismissed, setTrumpDismissed] = useState(false)
@@ -141,6 +144,8 @@ export function GameTable({
   const showTrumpIndicator = showTrump && (!trumpRevealed || !trumpDismissed)
   const tableLayout = seats.length === 6 ? 'six-seat-table' : 'four-seat-table'
   const sixSeatTable = seats.length === 6
+  /** Absolute seat -> position around the table, rotated so `viewerSeat` always lands at the bottom. */
+  const visualIndex = (seat: number) => (seat - viewerSeat + seats.length) % seats.length
 
   useEffect(() => {
     if (!trumpRevealed) setTrumpDismissed(false)
@@ -224,7 +229,7 @@ export function GameTable({
                       fill="currentColor"
                       className="pointer-events-none absolute left-1/2 top-1/2 z-30 h-6 w-6 text-gold drop-shadow-[0_0_4px_rgba(0,0,0,0.6)]"
                       style={{
-                        transform: `translate(-50%, -50%) rotate(${seatAngleDeg(play.player, seats.length)}deg) translate(28px, 0)`,
+                        transform: `translate(-50%, -50%) rotate(${seatAngleDeg(visualIndex(play.player), seats.length)}deg) translate(28px, 0)`,
                       }}
                       aria-hidden
                     >
@@ -251,16 +256,19 @@ export function GameTable({
       )}
 
       {/* seats */}
-      {seats.map((seat, i) => (
-        <div
-          key={i}
-          data-seat-index={i}
-          className={cn('game-table-seat absolute z-20', sixSeatTable && 'six-seat-station', hideBottomSeat && i === 0 && 'hidden')}
-          style={seatPosition(i, seats.length)}
-        >
-          <Seat seat={seat} highlighted={pointedPlayer === i} />
-        </div>
-      ))}
+      {seats.map((seat, i) => {
+        const vi = visualIndex(i)
+        return (
+          <div
+            key={i}
+            data-seat-index={vi}
+            className={cn('game-table-seat absolute z-20', sixSeatTable && 'six-seat-station', hideBottomSeat && vi === 0 && 'hidden')}
+            style={seatPosition(vi, seats.length)}
+          >
+            <Seat seat={seat} highlighted={pointedPlayer === i} />
+          </div>
+        )
+      })}
     </div>
   )
 }

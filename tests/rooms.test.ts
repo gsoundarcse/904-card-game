@@ -255,6 +255,16 @@ describe('leaving the table', () => {
     assert.equal(t.room().players.find((p) => p.seat === 1)?.isBot, true)
   })
 
+  it('hands the host role to another human when the host becomes a bot mid-match', () => {
+    const t = dealtTable(4)
+    assert.equal(t.room().hostId, t.host.id)
+    t.act(0, { type: 'leaveRoom' })
+    const room = t.room()
+    assert.notEqual(room.hostId, t.host.id)
+    const newHost = room.players.find((p) => p.id === room.hostId)!
+    assert.ok(!newHost.isBot, 'the new host must still be a human')
+  })
+
   it('refuses to leave mid-match if no other human is seated', () => {
     const { room, player: host } = createRoom(4, 'Host', undefined, ['bot', 'bot', 'bot'])
     applyAction(room.id, host.id, host.secret, { type: 'start' })
