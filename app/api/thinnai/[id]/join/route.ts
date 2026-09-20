@@ -10,7 +10,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json(getLobbyPreview(id))
   } catch (err) {
     const message = err instanceof ActionError ? err.message : 'Could not find that thinnai'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json({ error: message }, { status: message === 'That thinnai does not exist' ? 404 : 400 })
   }
 }
 

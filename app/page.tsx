@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { saveCredentials } from '@/lib/client/use-thinnai'
@@ -14,6 +14,8 @@ const SIZES = [
 
 export default function HomePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const roomClosed = searchParams.get('closed') === '1'
   const [seatCount, setSeatCount] = useState<4 | 6>(4)
   const [name, setName] = useState('')
   const [seatRoles, setSeatRoles] = useState<('bot' | 'invite')[]>(Array(3).fill('bot'))
@@ -60,6 +62,11 @@ export default function HomePage() {
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col items-center justify-center gap-8 px-4 py-12">
+      {roomClosed && (
+        <p className="w-full rounded-xl border border-destructive/60 bg-destructive/10 px-4 py-2.5 text-center text-sm text-destructive">
+          That thinnai is closed or no longer exists.
+        </p>
+      )}
       <header className="text-center">
         <p className="mb-2 font-mono text-xs uppercase tracking-[0.35em] text-gold">Trick-Taking · Counter-Claim</p>
         <h1 className="text-balance font-serif text-6xl font-bold tracking-tight text-gold-soft sm:text-7xl">

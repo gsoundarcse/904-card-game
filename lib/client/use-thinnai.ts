@@ -54,6 +54,7 @@ export function useThinnai(roomId: string, creds: Credentials | null) {
   const [view, setView] = useState<PlayerView | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [notFound, setNotFound] = useState(false)
   const versionRef = useRef(-1)
   const stopped = useRef(false)
 
@@ -68,7 +69,10 @@ export function useThinnai(roomId: string, creds: Credentials | null) {
             `/api/thinnai/${roomId}/state?playerId=${encodeURIComponent(creds!.playerId)}&since=${versionRef.current}`,
             { cache: 'no-store' },
           )
-          if (res.status === 204) {
+          if (res.status === 404) {
+            setNotFound(true)
+            return
+          } else if (res.status === 204) {
             // Unchanged.
           } else if (res.ok) {
             const data = await res.json()
@@ -121,5 +125,5 @@ export function useThinnai(roomId: string, creds: Credentials | null) {
     [roomId, creds],
   )
 
-  return { view, error, pending, send, clearError: () => setError(null) }
+  return { view, error, pending, notFound, send, clearError: () => setError(null) }
 }

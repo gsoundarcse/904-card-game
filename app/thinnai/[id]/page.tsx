@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { TEAM_NAME } from '@/lib/game'
 import { type Credentials, loadCredentials, saveCredentials } from '@/lib/client/use-thinnai'
@@ -37,6 +38,7 @@ function Splash({ children }: { children: React.ReactNode }) {
 }
 
 function JoinGate({ roomId, onJoined }: { roomId: string; onJoined: (c: Credentials) => void }) {
+  const router = useRouter()
   const [name, setName] = useState('')
   const [preview, setPreview] = useState<LobbyPreview | null>(null)
   const [seat, setSeat] = useState<number | null>(null)
@@ -49,6 +51,10 @@ function JoinGate({ roomId, onJoined }: { roomId: string; onJoined: (c: Credenti
       while (!stopped) {
         try {
           const res = await fetch(`/api/thinnai/${roomId}/join`, { cache: 'no-store' })
+          if (res.status === 404) {
+            router.push('/?closed=1')
+            return
+          }
           if (res.ok) {
             const data: LobbyPreview = await res.json()
             if (!stopped) {
@@ -69,7 +75,7 @@ function JoinGate({ roomId, onJoined }: { roomId: string; onJoined: (c: Credenti
     return () => {
       stopped = true
     }
-  }, [roomId])
+  }, [roomId, router])
 
   async function join() {
     if (!name.trim()) {

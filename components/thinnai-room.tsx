@@ -26,8 +26,22 @@ import { CardBack, CardFace, ClickableCard } from '@/components/playing-card'
 import { StrongSupport } from '@/components/strong-support'
 
 export function ThinnaiRoom({ roomId, creds }: { roomId: string; creds: Credentials }) {
-  const { view, error, pending, send, clearError } = useThinnai(roomId, creds)
+  const { view, error, pending, notFound, send, clearError } = useThinnai(roomId, creds)
   const router = useRouter()
+
+  useEffect(() => {
+    if (!notFound) return
+    clearCredentials(roomId)
+    router.push('/?closed=1')
+  }, [notFound, roomId, router])
+
+  if (notFound) {
+    return (
+      <main className="flex min-h-svh items-center justify-center px-4">
+        <p className="font-serif text-lg italic text-muted-foreground">This thinnai is closed. Heading home…</p>
+      </main>
+    )
+  }
 
   if (!view) {
     return (
