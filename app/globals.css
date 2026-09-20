@@ -237,11 +237,19 @@
 
   .four-seat-table .central-pile {
     top: 65%;
-    max-width: 46%;
+    max-width: 82%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
   }
 
   .six-seat-table {
     height: 340px;
+  }
+
+  .six-seat-table .central-pile {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 82%;
   }
 
   .six-seat-table .six-seat-station {

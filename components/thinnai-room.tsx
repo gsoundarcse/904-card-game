@@ -386,14 +386,7 @@ function Table({
         )}
         {view.status === 'playing' && (
           <div className="mt-3 flex justify-center">
-            <StrongSupport
-              revealed={r.trumpRevealed}
-              eligible={
-                r.claimer !== null &&
-                view.yourSeat !== r.claimer &&
-                teamOf(view.yourSeat) === teamOf(r.claimer)
-              }
-            />
+            <StrongSupport revealed={r.trumpRevealed} eligible={r.claimer !== null} />
           </div>
         )}
       </section>

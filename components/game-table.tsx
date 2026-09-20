@@ -222,7 +222,7 @@ export function GameTable({
                   {TEAM_NAME[played.team]}
                 </span>
                 <div className="relative">
-                  <CardFace card={play.card} size="lg" className="h-24 w-16 sm:h-32 sm:w-24" />
+                  <CardFace card={play.card} size="lg" className="h-16 w-11 sm:h-32 sm:w-24" />
                   {pointed && (
                     <svg
                       viewBox="0 0 24 24"
