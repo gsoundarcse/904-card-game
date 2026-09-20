@@ -117,6 +117,7 @@ export function ClickableCard({
   disabled,
   selected,
   onClick,
+  className,
 }: {
   card: Card
   size?: Size
@@ -126,6 +127,7 @@ export function ClickableCard({
   disabled?: boolean
   selected?: boolean
   onClick?: () => void
+  className?: string
 }) {
   return (
     <button
@@ -140,6 +142,7 @@ export function ClickableCard({
           ? 'cursor-not-allowed opacity-40 saturate-0'
           : 'cursor-pointer hover:-translate-y-4 hover:z-10',
         selected && '-translate-y-4',
+        className,
       )}
     >
       <CardFace

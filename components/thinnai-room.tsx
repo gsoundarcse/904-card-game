@@ -265,6 +265,24 @@ function Lobby({
   )
 }
 
+// Extra gap before a card whose suit differs from the previous one, so a sorted
+// hand reads as visually grouped suit clusters instead of one uniform strip.
+function suitGroupGap(hand: { suit: Suit }[], index: number): string {
+  return index > 0 && hand[index].suit !== hand[index - 1].suit ? 'ml-2.5 sm:ml-4' : ''
+}
+
+// Clusters consecutive same-suit cards so a suit group is a single flex item —
+// wrapping can only ever happen between groups, never splitting one apart.
+function groupBySuit<T extends { suit: Suit }>(hand: T[]): T[][] {
+  const groups: T[][] = []
+  for (const card of hand) {
+    const last = groups[groups.length - 1]
+    if (last && last[0].suit === card.suit) last.push(card)
+    else groups.push([card])
+  }
+  return groups
+}
+
 // ---------------------------------------------------------------------------
 
 function Table({
@@ -340,7 +358,7 @@ function Table({
         <div className="mobile-hand-tray flex min-h-36 items-end justify-center overflow-visible pb-2 px-1 sm:px-3">
           <div className="grid w-full grid-cols-6 items-end gap-1 sm:flex sm:w-auto sm:gap-3">
           {view.yourHand.length ? (
-            view.yourHand.map((card) =>
+            view.yourHand.map((card, i) =>
               view.status === 'playing' ? (
                 <ClickableCard
                   key={card.id}
@@ -349,11 +367,12 @@ function Table({
                   mobileSize="sm"
                   mobileGrid={false}
                   fan={false}
+                  className={suitGroupGap(view.yourHand, i)}
                   disabled={pending || !yourTurn || !playable.has(card.id)}
                   onClick={() => send({ type: 'playCard', cardId: card.id })}
                 />
               ) : (
-                <div key={card.id} className="flex w-full justify-center">
+                <div key={card.id} className={cn('flex w-full justify-center', suitGroupGap(view.yourHand, i))}>
                   <CardFace card={card} size="md" className="sm:h-32 sm:w-24 sm:text-sm" />
                 </div>
               ),
@@ -582,36 +601,33 @@ function TrumpPicker({ view, send }: { view: PlayerView; send: (a: Action) => vo
       <div className="max-h-[92svh] w-full max-w-lg overflow-y-auto rounded-2xl border-2 border-gold/50 bg-popover p-6 text-center shadow-2xl">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold">You won the claim</p>
         <h2 className="mt-2 font-serif text-3xl font-bold text-gold-soft">Set your trump card</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Target <span className="font-semibold text-gold">{view.round.claim}</span>. Choose one card to lay face down.
-          Its suit becomes trump — and you cannot play that card until trump is asked for.
-        </p>
 
         <div className="mt-5 rounded-xl border border-border bg-background/40 p-3">
           <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
             Tap a card to lay it face down
           </p>
-          {suggested && (
-            <p className="mb-3 font-mono text-[10px] text-gold">
-              Suggested: your weakest {suggested.suit} card — you hold the most of that suit, so trump favours you.
-            </p>
-          )}
-          <div className="flex flex-nowrap items-end justify-center gap-1.5 overflow-x-auto pb-1 sm:gap-3">
-            {view.yourHand.map((card) => (
-              <div key={card.id} className="flex flex-col items-center gap-1">
-                {suggested?.id === card.id && (
-                  <span className="rounded-full bg-gold px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-primary-foreground">
-                    Suggested
-                  </span>
-                )}
-                <ClickableCard
-                  card={card}
-                  size="md"
-                  mobileSize="sm"
-                  mobileGrid={false}
-                  fan={false}
-                  onClick={() => send({ type: 'selectTrump', cardId: card.id })}
-                />
+          {/* Wraps instead of scrolling — a hand this small always fits in one view.
+              Each suit group is one flex item, so wrapping never splits a group. */}
+          <div className="flex flex-wrap items-end justify-center gap-2.5 gap-y-3 sm:gap-4">
+            {groupBySuit(view.yourHand).map((group) => (
+              <div key={group[0].id} className="flex flex-nowrap items-end gap-1.5 sm:gap-3">
+                {group.map((card) => (
+                  <div key={card.id} className="flex flex-col items-center gap-1">
+                    {suggested?.id === card.id && (
+                      <span className="rounded-full bg-gold px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-primary-foreground">
+                        Suggested
+                      </span>
+                    )}
+                    <ClickableCard
+                      card={card}
+                      size="md"
+                      mobileSize="sm"
+                      mobileGrid={false}
+                      fan={false}
+                      onClick={() => send({ type: 'selectTrump', cardId: card.id })}
+                    />
+                  </div>
+                ))}
               </div>
             ))}
           </div>
